@@ -59,9 +59,9 @@ def prepare_data(train_data):
 
 def create_model(X, X_train, X_valid, Y_train, Y_valid):
     model = Sequential()
-    model.add(Dense(80, input_dim=60, activation='relu'))
-    model.add(Dense(64, activation='relu'))
-    model.add(Dense(56, activation='relu'))
+    model.add(Dense(128, input_dim=60, activation='relu'))
+    model.add(Dense(96, activation='sigmoid'))
+    model.add(Dense(64, activation='sigmoid'))
     model.add(Dense(41, activation='softmax'))
 
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])

@@ -46,7 +46,7 @@ def main():
         exit(0)
 
     score = authenticate_user(model, central_vector, username)
-    print(f"SCORE: {score * 100}%")
+    print(f"SCORE: {score}")
 
 
 if __name__ == "__main__":

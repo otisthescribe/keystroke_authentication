@@ -36,7 +36,6 @@ def register_template(model, central_vector):
         print(f"({i+1}): ", end="")
         sample = record()
         samples.append(sample)
-        print()
     data = np.concatenate(np.array(samples))
     template = create_template(model, central_vector, data)
     return template, passphrase
@@ -54,10 +53,11 @@ def save_user(username, template, passphrase):
     """
     Save user data to file.
     """
-    with open("users_data.pickle", 'rb') as handle:
-        users = pickle.load(handle)
-        if username in users.keys():
-            return True
+    if os.path.exists("users_data.pickle"):
+        with open("users_data.pickle", 'rb') as handle:
+            users = pickle.load(handle)
+    else:
+        users = {}
 
     users[username] = {
         "template": template,
