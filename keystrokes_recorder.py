@@ -41,7 +41,7 @@ def record():
     global keystrokes
     keystrokes = []
     keyboard.hook(key_recording)
-    keyboard.wait('enter')
+    keyboard.wait("enter")
     keyboard.unhook(key_recording)
     return keystrokes
 

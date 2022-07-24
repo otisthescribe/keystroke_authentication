@@ -11,7 +11,7 @@ def create_sample(model, central_vector, data):
     i = 0
     temp = []
     while (i + 1) * block_size <= len(data):
-        temp.append(data[block_size * i:block_size * (i+1)])
+        temp.append(data[block_size * i : block_size * (i + 1)])
         i += 1
     temp = np.array(temp)
     temp.reshape(i, block_size)
@@ -33,7 +33,7 @@ def authenticate_user(model, central_vector, username):
 
 
 def get_user_data(username):
-    with open("users_data.pickle", 'rb') as handle:
+    with open("users_data.pickle", "rb") as handle:
         users = pickle.load(handle)
     return users[f"{username}"]
 
