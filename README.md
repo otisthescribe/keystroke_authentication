@@ -14,6 +14,9 @@ Authors: Grzegorz Kmita, Michał Moskal
 
 ## Install required packages
 
+To run scripts, you need to have several packages that are not installed by default.
+Install all of them at one by running this command:
+
 ```
 pip3 install -r requirements.txt
 ```
