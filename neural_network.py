@@ -207,8 +207,8 @@ def confidence_figure(confidence_TP_MLP: np.ndarray, confidence_TN_MLP: np.ndarr
     """
     # Number of true negatives vs number of true positives
     plt.figure()
-    n_TP, bins_TP, patches_TP = plt.hist(confidence_TP_MLP, alpha=0.1, bins=200)
-    n_TN, bins_TN, patches_TN = plt.hist(confidence_TN_MLP, alpha=0.1, bins=200)
+    n_TP, bins_TP, patches_TP = plt.hist(confidence_TP_MLP, alpha=0.5, bins=200)
+    n_TN, bins_TN, patches_TN = plt.hist(confidence_TN_MLP, alpha=0.5, bins=200)
     plt.legend(["score True Positive", "score True Negative"])
     plt.xlim([-1, 1])
     plt.xlabel("score")
