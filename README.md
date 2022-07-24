@@ -12,6 +12,13 @@ project by Kevin Killourhy and Roy Maxion.
 
 Authors: Grzegorz Kmita, Michał Moskal
 
+## Install required packages
+
+```
+pip3 install -r requirements.txt
+```
+
+
 ## Creating model
 
 In order to create model and train it with test data, run:
