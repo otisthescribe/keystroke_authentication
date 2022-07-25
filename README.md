@@ -10,7 +10,9 @@ Training and evaluation data are stored in "simple_dataset.csv" file. Data was e
 [Comparing Anomaly-Detection Algorithms for Keystroke Dynamics](https://www.cs.cmu.edu/~maxion/pubs/KillourhyMaxion09.pdf)
 project by Kevin Killourhy and Roy Maxion.
 
-Authors: Grzegorz Kmita, Michał Moskal
+Authors: 
+- Grzegorz Kmita (gkmita@student.agh.edu.pl)
+- Michał Moskal (mimoskal@student.agh.edu.pl)
 
 ## Install required packages
 
