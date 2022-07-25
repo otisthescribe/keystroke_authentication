@@ -28,6 +28,7 @@ def authenticate_user(model, central_vector, username):
     print(passphrase)
     print(f"--> ", end="")
     sample = record()
+    print(sample)
     probe = create_sample(model, central_vector, sample)
     return check_score(template, probe)
 
@@ -47,6 +48,15 @@ def main():
 
     score = authenticate_user(model, central_vector, username)
     print(f"SCORE: {score}")
+    print("Entering infinite loop. Type exit as a username to exit the program")
+    while username != "exit":
+        username = input("username: ")
+        if not user_exists(username):
+            print("User does not exist. Register users before trying to authenticate them.")
+            exit(0)
+
+        score = authenticate_user(model, central_vector, username)
+        print(f"SCORE: {score}")
 
 
 if __name__ == "__main__":

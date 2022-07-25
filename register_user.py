@@ -68,13 +68,12 @@ def save_user(username, template, passphrase):
 def main():
     model, central_vector = load_model_from_dir()
     username = input("username: ")
-    if user_exists(username):
+    while user_exists(username):
         print("User already exists!")
-        exit(0)
+        username = input("username: ")
 
     template, passphrase = register_template(model, central_vector)
     save_user(username, template, passphrase)
-    # print("Let's check if that works, shall we?")
 
 
 if __name__ == "__main__":

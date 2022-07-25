@@ -107,9 +107,9 @@ def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_trai
     """
     model = Sequential()
     model.add(Dense(128, input_dim=60, activation="relu"))
-    model.add(Dense(96, activation="sigmoid"))
-    model.add(Dense(64, activation="sigmoid"))
-    model.add(Dense(41, activation="softmax"))
+    model.add(Dense(96, activation="relu"))
+    model.add(Dense(64, activation="relu"))
+    model.add(Dense(41, activation="sigmoid"))
 
     model.compile(
         loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
@@ -213,8 +213,8 @@ def confidence_figure(confidence_TP_MLP: np.ndarray, confidence_TN_MLP: np.ndarr
     plt.xlim([-1, 1])
     plt.xlabel("score")
     plt.grid()
-    plt.show()
     plt.savefig("./plots/confidence_TP_TN.png")
+    plt.show()
 
     # Probability of true negatives based on the threshold
     plt.figure()
@@ -223,8 +223,8 @@ def confidence_figure(confidence_TP_MLP: np.ndarray, confidence_TN_MLP: np.ndarr
     plt.grid()
     plt.xlabel("threshold")
     plt.ylabel("probability")
-    plt.show()
     plt.savefig("./plots/threshold_probability.png")
+    plt.show()
 
 
 def model_accuracy_figure(history) -> None:
@@ -240,8 +240,9 @@ def model_accuracy_figure(history) -> None:
     plt.ylabel("Accuracy")
     plt.xlabel("Epoch")
     plt.legend(["Train", "Test"], loc="upper left")
-    plt.show()
     plt.savefig("./plots/model_accuracy.png")
+    plt.show()
+
 
     # Model loss
     plt.figure()
@@ -251,8 +252,8 @@ def model_accuracy_figure(history) -> None:
     plt.ylabel("Loss")
     plt.xlabel("Epoch")
     plt.legend(["Train", "Test"], loc="upper left")
-    plt.show()
     plt.savefig("./plots/model_loss.png")
+    plt.show()
 
 
 def save_model(model: Sequential, directory: str = "model") -> None:
