@@ -28,7 +28,6 @@ def authenticate_user(model, central_vector, username):
     print(passphrase)
     print(f"--> ", end="")
     sample = record()
-    print(sample)
     probe = create_sample(model, central_vector, sample)
     return check_score(template, probe)
 
