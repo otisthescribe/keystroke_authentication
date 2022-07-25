@@ -7,6 +7,7 @@ from keras.models import Sequential, load_model
 from keras.utils import to_categorical
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 
 def load_model_from_dir(directory: str = "./model") -> (Sequential, np.ndarray):
@@ -93,6 +94,13 @@ def prepare_data(train_data: dict) -> (np.ndarray, np.ndarray, np.ndarray, np.nd
     return X, Y, X_train, X_valid, Y_train, Y_valid
 
 
+def feature_scaling(X_train, X_valid):
+    sc = StandardScaler()
+    X_train = sc.fit_transform(X_train)
+    X_valid = sc.fit_transform(X_valid)
+    return X_train, X_valid
+
+
 def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_train: np.ndarray,
                  Y_valid: np.ndarray, ) -> (Sequential, np.ndarray, object):
     """
@@ -105,11 +113,12 @@ def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_trai
     :param Y_valid: array for output of valid data (from model)
     :return: model, central_vector, history data
     """
+    # THIS PART NEEDS TO BE REVISED - HOW MANY NEURONS AND HOW MANY LAYERS
     model = Sequential()
-    model.add(Dense(128, input_dim=60, activation="relu"))
-    model.add(Dense(96, activation="relu"))
-    model.add(Dense(64, activation="relu"))
-    model.add(Dense(41, activation="sigmoid"))
+    model.add(Dense(units=60, input_dim=60, activation="relu"))
+    model.add(Dense(units=56, activation="relu"))
+    # model.add(Dense(units=64, activation="relu"))
+    model.add(Dense(units=41, activation="sigmoid"))
 
     model.compile(
         loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
@@ -284,6 +293,7 @@ def main() -> None:
     eval_data, train_data = read_data()
     # Prepare data for the model
     X, Y, X_train, X_valid, Y_train, Y_valid = prepare_data(eval_data)
+    # X_train, X_valid = feature_scaling(X_train, X_valid) <-- data preprocessing
     # Create model and central vector
     model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid)
     # Create test users' enroll templates and test samples
