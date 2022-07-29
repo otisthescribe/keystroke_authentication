@@ -117,17 +117,13 @@ def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_trai
     model = Sequential()
     model.add(Dense(units=60, input_dim=60, activation="relu"))
     model.add(Dense(units=56, activation="relu"))
-    model.add(Dense(units=41, activation="sigmoid"))
+    model.add(Dense(units=41, activation="softmax"))
 
-    model.compile(
-        loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
-    )
+    model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(
-        X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=16
-    )
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=16)
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 

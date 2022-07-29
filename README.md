@@ -56,6 +56,13 @@ $ ...
 $ (5): [rewrite passphrase 5 times]
 ```
 
+Passphrase is chosen from the file pass.txt. It is not sensitive data so it doesn't need to be protected.
+Passphrase can look like this:
+```
+"The wind was strong today in the city"
+```
+
+
 ## Authenticating user
 
 Registered user can be authenticated. User needs to provide a sample that will
