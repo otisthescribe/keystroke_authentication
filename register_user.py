@@ -4,11 +4,21 @@ import pickle
 import diceware
 from neural_network import load_model_from_dir
 from keystrokes_recorder import record
+import random
 
 
-def generate_passphrase(num):
+def generate_passphrase2():
+    num = 4
     options = diceware.handle_options(args=[f"-n {num}", "-d "])
     passphrase = diceware.get_passphrase(options=options)
+    return passphrase
+
+
+def generate_passphrase():
+    with open("./pass.txt") as file:
+        lines = file.readlines()
+        passphrase = lines[random.randint(0, len(lines) - 1)]
+        passphrase = passphrase.replace("\n", "")
     return passphrase
 
 
@@ -27,7 +37,7 @@ def create_template(model, central_vector, data):
 
 
 def register_template(model, central_vector):
-    passphrase = generate_passphrase(4)
+    passphrase = generate_passphrase()
     probes_number = 5
     print(f"Rewrite this sentence {probes_number} times:")
     print(passphrase)

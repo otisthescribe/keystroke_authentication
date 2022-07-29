@@ -252,7 +252,6 @@ def model_accuracy_figure(history) -> None:
     plt.savefig("./plots/model_accuracy.png")
     plt.show()
 
-
     # Model loss
     plt.figure()
     plt.plot(history.history["loss"])
