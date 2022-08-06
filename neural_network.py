@@ -42,27 +42,39 @@ def check_score(sample: np.ndarray, template: np.ndarray) -> float:
     return score[0][0]
 
 
-def read_data(filename: str = "sample_dataset.csv") -> (dict, dict):
+def read_data():
     """
     Read data from filename and divide it into training and
     evaluation data.
     Training data consists of 41 people's samples.
     Evaluation data consists of 10 people's samples.
 
-    :param filename: string indicating the filename
     :return: tuple of two dictonaries
     """
-    df = pd.read_csv(filename, header=None)
     train_data = {}
     eval_data = {}
     # make it universal, so that other file with data will work too
-    for i in range(41):
-        temp = df.iloc[400 * i: 400 * (i + 1)]
-        train_data[i] = np.concatenate(temp.to_numpy())
+    for i in range(2):
+        with open(f'./data/user_data_set_{i}.pickle', 'rb') as file:
+            temp = pickle.load(file)
+            train_data.update(temp)
+            print(f"Loaded file no. {i}")
 
-    for i in range(41, 51):
-        temp = df.iloc[400 * i: 400 * (i + 1)]
-        eval_data[i] = np.concatenate(temp.to_numpy())
+    for i in range(2, 3):
+        with open(f'./data/user_data_set_{i}.pickle', 'rb') as file:
+            temp = pickle.load(file)
+            eval_data.update(temp)
+            print(f"Loaded file no. {i}")
+
+    # CONCATENATE
+
+    for user in train_data.keys():
+        temp = np.concatenate(train_data[user])
+        train_data[user] = temp
+
+    for user in eval_data.keys():
+        temp = np.concatenate(eval_data[user])
+        eval_data[user] = temp
 
     return train_data, eval_data
 
@@ -79,15 +91,17 @@ def prepare_data(train_data: dict) -> (np.ndarray, np.ndarray, np.ndarray, np.nd
     block_size = 60
 
     for person_id in train_data.keys():
-        # for each person there is a matrix 133 x 60
-        for location in range(0, 8000 - block_size, block_size):
-            X.append(train_data[person_id][location: location + block_size])
+        blocks = 0
+        while (blocks + 1) * block_size < len(train_data[person_id]):
+            X.append(train_data[person_id][blocks * block_size: (blocks + 1) * block_size])
             Y.append(person_id)
+            blocks += 1
 
     X = np.array(X)
     Y = np.array(Y)
-
-    Y_oneshot = to_categorical(Y, num_classes=41)
+    users = len(train_data.keys())
+    Y_oneshot = to_categorical(Y, num_classes=None)
+    print(Y_oneshot.shape)
     X_train, X_valid, Y_train, Y_valid = train_test_split(
         X, Y_oneshot, test_size=0.2, random_state=123
     )
@@ -102,10 +116,11 @@ def feature_scaling(X_train, X_valid):
 
 
 def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_train: np.ndarray,
-                 Y_valid: np.ndarray, ) -> (Sequential, np.ndarray, object):
+                 Y_valid: np.ndarray, users: int) -> (Sequential, np.ndarray, object):
     """
     Create keras model from training data and evaluate it using valid data.
 
+    :param users:
     :param X: array with everyone's data in one block
     :param X_train: array with training data
     :param X_valid: array with valid data
@@ -117,13 +132,13 @@ def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_trai
     model = Sequential()
     model.add(Dense(units=60, input_dim=60, activation="relu"))
     model.add(Dense(units=56, activation="relu"))
-    model.add(Dense(units=41, activation="softmax"))
+    model.add(Dense(units=users, activation="softmax"))
 
     model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=16)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=128)
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 
@@ -141,32 +156,29 @@ def enroll_users(model: Sequential, eval_data: dict, central_vector: np.ndarray)
     """
     enroll = {}  # klucz = osoba ; wartosc = template
     test = {}  # klucz = osoba ; wartosc = tab[5]
+    block_size = 60
 
-    probes_number = 10
     for person_id in eval_data.keys():
+        user_blocks = []
+        blocks = 0
+
+        while (blocks + 1) * block_size < len(eval_data[person_id]):
+            user_blocks.append(eval_data[person_id][blocks * block_size: (blocks + 1) * block_size])
+            blocks += 1
+
+        tst = len(user_blocks) // 5
+        data_for_test = user_blocks[:tst]
+        data_for_enroll = user_blocks[tst:]
 
         # ENROLLMENT VECTOR
-        temp = []
-        for location in range(0, probes_number):
-            data = eval_data[person_id][60 * location: 60 * (location + 1)]
-            temp.append(data)
-        output = model.predict(np.array(temp))
+        output = model.predict(np.array(data_for_enroll))
         out_vector = np.mean(output, axis=0)
         enroll[person_id] = np.subtract(out_vector, central_vector)
 
         # TEST VECTORS
-        test_vectors = []
-        for i in range(probes_number):
-            temp = []
-            for location in range(
-                    probes_number * (i + 1), probes_number * (i + 1) + probes_number
-            ):
-                data = eval_data[person_id][60 * location: 60 * (location + 1)]
-                temp.append(data)
-            output = model.predict(np.array(temp))
-            out_vector = np.mean(output, axis=0)
-            test_vectors.append(np.subtract(out_vector, central_vector))
-        test[person_id] = np.array(test_vectors)
+        output = model.predict(np.array(data_for_test))
+        out_vector = np.mean(output, axis=0)
+        test[person_id] = np.subtract(out_vector, central_vector)
 
     return enroll, test
 
@@ -286,11 +298,12 @@ def main() -> None:
     """
     # Divide test data into eval and train
     eval_data, train_data = read_data()
+    users = len(train_data.keys())
     # Prepare data for the model
     X, Y, X_train, X_valid, Y_train, Y_valid = prepare_data(eval_data)
     # X_train, X_valid = feature_scaling(X_train, X_valid) <-- data preprocessing
     # Create model and central vector
-    model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid)
+    model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid, users)
     # Create test users' enroll templates and test samples
     enroll, test = enroll_users(model, eval_data, central_vector)
     # Evaluate the model using cross evaluation (every user with everyone)
