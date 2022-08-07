@@ -99,13 +99,16 @@ def prepare_data(train_data: dict) -> (np.ndarray, np.ndarray, np.ndarray, np.nd
 
     X = np.array(X)
     Y = np.array(Y)
-    users = len(train_data.keys())
-    Y_oneshot = to_categorical(Y, num_classes=None)
+    print(Y)
+    print(train_data.keys())
+    users_num = len(train_data.keys())
+    print(users_num)
+    Y_oneshot = to_categorical(Y, num_classes=users_num)
     print(Y_oneshot.shape)
     X_train, X_valid, Y_train, Y_valid = train_test_split(
         X, Y_oneshot, test_size=0.2, random_state=123
     )
-    return X, Y, X_train, X_valid, Y_train, Y_valid
+    return X, Y, X_train, X_valid, Y_train, Y_valid, users_num
 
 
 def feature_scaling(X_train, X_valid):
@@ -298,12 +301,13 @@ def main() -> None:
     """
     # Divide test data into eval and train
     eval_data, train_data = read_data()
-    users = len(train_data.keys())
     # Prepare data for the model
-    X, Y, X_train, X_valid, Y_train, Y_valid = prepare_data(eval_data)
+    X, Y, X_train, X_valid, Y_train, Y_valid, users_num = prepare_data(eval_data)
     # X_train, X_valid = feature_scaling(X_train, X_valid) <-- data preprocessing
     # Create model and central vector
-    model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid, users)
+    model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid, users_num)
+    save_model(model)
+    save_central_vector(central_vector)
     # Create test users' enroll templates and test samples
     enroll, test = enroll_users(model, eval_data, central_vector)
     # Evaluate the model using cross evaluation (every user with everyone)
@@ -311,8 +315,16 @@ def main() -> None:
     # Draw figures representing confidence and save data
     confidence_figure(conf_TP, conf_TN)
     model_accuracy_figure(history)
-    save_model(model)
+    # save_model(model)
     save_central_vector(central_vector)
+
+
+def main2():
+    model, central_vector = load_model_from_dir("model")
+    eval_data, train_data = read_data()
+    enroll, test = enroll_users(model, eval_data, central_vector)
+    conf_TP, conf_TN = cross_evaluate(enroll, test)
+    confidence_figure(conf_TP, conf_TN)
 
 
 if __name__ == "__main__":
