@@ -51,30 +51,11 @@ def read_data():
 
     :return: tuple of two dictonaries
     """
-    train_data = {}
-    eval_data = {}
     # make it universal, so that other file with data will work too
-    for i in range(2):
-        with open(f'./data/user_data_set_{i}.pickle', 'rb') as file:
-            temp = pickle.load(file)
-            train_data.update(temp)
-            print(f"Loaded file no. {i}")
-
-    for i in range(2, 3):
-        with open(f'./data/user_data_set_{i}.pickle', 'rb') as file:
-            temp = pickle.load(file)
-            eval_data.update(temp)
-            print(f"Loaded file no. {i}")
-
-    # CONCATENATE
-
-    for user in train_data.keys():
-        temp = np.concatenate(train_data[user])
-        train_data[user] = temp
-
-    for user in eval_data.keys():
-        temp = np.concatenate(eval_data[user])
-        eval_data[user] = temp
+    with open(f'./freeText/free_text_data.pickle', 'rb') as file:
+        users = pickle.load(file)
+        train_data = {k: v for k, v in users.items() if k in range(400)}
+        eval_data = {k: v for k, v in users.items() if k in range(400, 500)}
 
     return train_data, eval_data
 
@@ -99,12 +80,8 @@ def prepare_data(train_data: dict) -> (np.ndarray, np.ndarray, np.ndarray, np.nd
 
     X = np.array(X)
     Y = np.array(Y)
-    print(Y)
-    print(train_data.keys())
     users_num = len(train_data.keys())
-    print(users_num)
     Y_oneshot = to_categorical(Y, num_classes=users_num)
-    print(Y_oneshot.shape)
     X_train, X_valid, Y_train, Y_valid = train_test_split(
         X, Y_oneshot, test_size=0.2, random_state=123
     )
@@ -134,14 +111,16 @@ def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_trai
     # THIS PART NEEDS TO BE REVISED - HOW MANY NEURONS AND HOW MANY LAYERS
     model = Sequential()
     model.add(Dense(units=60, input_dim=60, activation="relu"))
-    model.add(Dense(units=56, activation="relu"))
+    model.add(Dense(units=128, activation="relu"))
+    model.add(Dense(units=256, activation="relu"))
+    model.add(Dense(units=512, activation="relu"))
     model.add(Dense(units=users, activation="softmax"))
 
     model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=128)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=256, batch_size=64)
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 
@@ -197,18 +176,13 @@ def cross_evaluate(enroll: dict, test: dict) -> (np.ndarray, np.ndarray):
     confidence_TP_MLP = []
     confidence_TN_MLP = []
     for userA in enroll.keys():
-        userA_model = np.expand_dims(enroll[userA], axis=0)
-        # testing with the same user's test vectors
-        for t in test[userA]:
-            temp = np.expand_dims(t, axis=0)
-            a = cosine_similarity(userA_model, temp)
-            confidence_TP_MLP.append(a)
+        a = check_score(enroll[userA], test[userA])
+        confidence_TP_MLP.append(a)
         # testing with other users' test vectors
         for userB in test.keys():
             if userB != userA:
-                for t in test[userB]:
-                    b = cosine_similarity(userA_model, np.expand_dims(t, axis=0))
-                    confidence_TN_MLP.append(b)
+                b = check_score(enroll[userA], test[userB])
+                confidence_TN_MLP.append(b)
 
     confidence_TP_MLP = np.squeeze(np.array(confidence_TP_MLP))
     confidence_TN_MLP = np.squeeze(np.array(confidence_TN_MLP))
@@ -315,7 +289,7 @@ def main() -> None:
     # Draw figures representing confidence and save data
     confidence_figure(conf_TP, conf_TN)
     model_accuracy_figure(history)
-    # save_model(model)
+    save_model(model)
     save_central_vector(central_vector)
 
 
