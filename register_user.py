@@ -8,6 +8,11 @@ import random
 
 
 def generate_passphrase2():
+    """
+    Generate the random passphrase using diceware.
+    Num is the number of words in the passphrase.
+    :return: string containing passphrase
+    """
     num = 4
     options = diceware.handle_options(args=[f"-n {num}", "-d "])
     passphrase = diceware.get_passphrase(options=options)
@@ -15,7 +20,13 @@ def generate_passphrase2():
 
 
 def generate_passphrase():
-    with open("./pass.txt") as file:
+    """
+    Get the random passphrase from the file passphrase.txt.
+    This file contains a lot of easy sentences that can
+    be used to register and authenticate user.
+    :return:
+    """
+    with open("./passphrase.txt") as file:
         lines = file.readlines()
         passphrase = lines[random.randint(0, len(lines) - 1)]
         passphrase = passphrase.replace("\n", "")
@@ -23,6 +34,14 @@ def generate_passphrase():
 
 
 def create_template(model, central_vector, data):
+    """
+    Given the user's data (input) calculate the template.
+    Use the model to get a vector and central vector to normalize the output.
+    :param model: keras model
+    :param central_vector: central vector saved in model directory
+    :param data: user's input
+    :return: template vector
+    """
     block_size = 60
     i = 0
     temp = []
@@ -37,6 +56,12 @@ def create_template(model, central_vector, data):
 
 
 def register_template(model, central_vector):
+    """
+
+    :param model:
+    :param central_vector:
+    :return:
+    """
     passphrase = generate_passphrase()
     probes_number = 5
     print(f"Rewrite this sentence {probes_number} times:")
@@ -46,7 +71,7 @@ def register_template(model, central_vector):
         print(f"({i+1}): ", end="")
         sample = record()
         samples.append(sample)
-    data = np.concatenate(np.array(samples))
+    data = np.concatenate(samples)
     template = create_template(model, central_vector, data)
     return template, passphrase
 

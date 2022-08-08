@@ -2,10 +2,6 @@ import numpy as np
 import pandas as pd
 import pickle
 
-file1 = "GayMarriage.csv"
-file2 = "GunControl.csv"
-file3 = "ReviewAMT.csv"
-
 
 def transform_file(file, drop_columns):
     path = "../Free text dataset/"
@@ -42,22 +38,39 @@ def transform_file(file, drop_columns):
     return new_data
 
 
-drop_columns = ['Group', 'Flow', 'Topic', 'ReviewDate', 'AccessKey', 'Opinion', 'ReviewType', 'Task', 'ReviewText']
-data1 = transform_file(file1, drop_columns)
-data2 = transform_file(file2, drop_columns)
-drop_columns = ['Group', 'Flow', 'Restaurant', 'ReviewDate', 'AccessKey', 'Addr', 'ReviewTopic', 'Site', 'Task',
-                'ReviewText']
-data3 = transform_file(file3, drop_columns)
-print(len(data1), len(data2), len(data3))
-joined = pd.concat([data1, data2, data3], ignore_index=True)
-joined['UserName'] = joined['UserName'].str.upper()
-output = joined.groupby('UserName', as_index=False).agg({'Keystrokes': 'sum'})
-output['LENGTH'] = output['Keystrokes'].apply(lambda x: len(x))
-output.sort_values(by=['LENGTH'], inplace=True, ascending=False, ignore_index=True)
-print(output)
-users = {}
-for index, row in output.iterrows():
-    users[index] = np.array(row['Keystrokes'])
+def merge():
+    file1 = "GayMarriage.csv"
+    file2 = "GunControl.csv"
+    file3 = "ReviewAMT.csv"
 
-with open("./freeText/free_text_data.pickle", 'wb') as file:
-    pickle.dump(users, file)
+    drop_columns = ['Group', 'Flow', 'Topic', 'ReviewDate', 'AccessKey', 'Opinion', 'ReviewType', 'Task', 'ReviewText']
+    data1 = transform_file(file1, drop_columns)
+    data2 = transform_file(file2, drop_columns)
+    drop_columns = ['Group', 'Flow', 'Restaurant', 'ReviewDate', 'AccessKey', 'Addr', 'ReviewTopic', 'Site', 'Task',
+                    'ReviewText']
+    data3 = transform_file(file3, drop_columns)
+
+    joined = pd.concat([data1, data2, data3], ignore_index=True)
+    joined['UserName'] = joined['UserName'].str.upper()
+    output = joined.groupby('UserName', as_index=False).agg({'Keystrokes': 'sum'})
+    output['LENGTH'] = output['Keystrokes'].apply(lambda x: len(x))
+    output['LENGTH'] = output['Keystrokes'].apply(lambda x: len(x))
+    output.sort_values(by=['LENGTH'], inplace=True, ascending=False, ignore_index=True)
+    return output
+
+
+def create_dict(data):
+    users = {}
+    for index, row in data.iterrows():
+        users[index] = np.array(row['Keystrokes'])
+    save_to_file(users)
+
+
+def save_to_file(dictionary):
+    with open("./freeText/free_text_data.pickle", 'wb') as file:
+        pickle.dump(dictionary, file)
+
+
+if __name__=="__main__":
+    data = merge()
+    create_dict(data)

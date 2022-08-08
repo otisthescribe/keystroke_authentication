@@ -1,13 +1,11 @@
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 from keras.layers import Dense
 from keras.models import Sequential, load_model
 from keras.utils import to_categorical
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
 
 def load_model_from_dir(directory: str = "./model") -> (Sequential, np.ndarray):
@@ -51,11 +49,10 @@ def read_data():
 
     :return: tuple of two dictonaries
     """
-    # make it universal, so that other file with data will work too
     with open(f'./freeText/free_text_data.pickle', 'rb') as file:
         users = pickle.load(file)
         train_data = {k: v for k, v in users.items() if k in range(400)}
-        eval_data = {k: v for k, v in users.items() if k in range(400, 500)}
+        eval_data = {k: v for k, v in users.items() if k in range(400, 600)}
 
     return train_data, eval_data
 
@@ -88,13 +85,6 @@ def prepare_data(train_data: dict) -> (np.ndarray, np.ndarray, np.ndarray, np.nd
     return X, Y, X_train, X_valid, Y_train, Y_valid, users_num
 
 
-def feature_scaling(X_train, X_valid):
-    sc = StandardScaler()
-    X_train = sc.fit_transform(X_train)
-    X_valid = sc.fit_transform(X_valid)
-    return X_train, X_valid
-
-
 def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_train: np.ndarray,
                  Y_valid: np.ndarray, users: int) -> (Sequential, np.ndarray, object):
     """
@@ -113,14 +103,14 @@ def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_trai
     model.add(Dense(units=60, input_dim=60, activation="relu"))
     model.add(Dense(units=128, activation="relu"))
     model.add(Dense(units=256, activation="relu"))
-    model.add(Dense(units=512, activation="relu"))
+    # model.add(Dense(units=512, activation="relu"))
     model.add(Dense(units=users, activation="softmax"))
 
-    model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+    model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"], run_eagerly=True)
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=256, batch_size=64)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=256, batch_size=128)
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 
@@ -277,11 +267,8 @@ def main() -> None:
     eval_data, train_data = read_data()
     # Prepare data for the model
     X, Y, X_train, X_valid, Y_train, Y_valid, users_num = prepare_data(eval_data)
-    # X_train, X_valid = feature_scaling(X_train, X_valid) <-- data preprocessing
     # Create model and central vector
     model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid, users_num)
-    save_model(model)
-    save_central_vector(central_vector)
     # Create test users' enroll templates and test samples
     enroll, test = enroll_users(model, eval_data, central_vector)
     # Evaluate the model using cross evaluation (every user with everyone)
@@ -291,14 +278,6 @@ def main() -> None:
     model_accuracy_figure(history)
     save_model(model)
     save_central_vector(central_vector)
-
-
-def main2():
-    model, central_vector = load_model_from_dir("model")
-    eval_data, train_data = read_data()
-    enroll, test = enroll_users(model, eval_data, central_vector)
-    conf_TP, conf_TN = cross_evaluate(enroll, test)
-    confidence_figure(conf_TP, conf_TN)
 
 
 if __name__ == "__main__":
