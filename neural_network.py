@@ -49,7 +49,7 @@ def read_data():
 
     :return: tuple of two dictonaries
     """
-    with open(f'./freeText/free_text_data.pickle', 'rb') as file:
+    with open(f"./freeText/free_text_data.pickle", "rb") as file:
         users = pickle.load(file)
         train_data = {k: v for k, v in users.items() if k in range(400)}
         eval_data = {k: v for k, v in users.items() if k in range(400, 600)}
@@ -57,7 +57,9 @@ def read_data():
     return train_data, eval_data
 
 
-def prepare_data(train_data: dict) -> (np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray):
+def prepare_data(
+    train_data: dict,
+) -> (np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray):
     """
     Prepare data for model training. Divide data into train and valid.
 
@@ -71,7 +73,9 @@ def prepare_data(train_data: dict) -> (np.ndarray, np.ndarray, np.ndarray, np.nd
     for person_id in train_data.keys():
         blocks = 0
         while (blocks + 1) * block_size < len(train_data[person_id]):
-            X.append(train_data[person_id][blocks * block_size: (blocks + 1) * block_size])
+            X.append(
+                train_data[person_id][blocks * block_size : (blocks + 1) * block_size]
+            )
             Y.append(person_id)
             blocks += 1
 
@@ -85,8 +89,14 @@ def prepare_data(train_data: dict) -> (np.ndarray, np.ndarray, np.ndarray, np.nd
     return X, Y, X_train, X_valid, Y_train, Y_valid, users_num
 
 
-def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_train: np.ndarray,
-                 Y_valid: np.ndarray, users: int) -> (Sequential, np.ndarray, object):
+def create_model(
+    X: np.ndarray,
+    X_train: np.ndarray,
+    X_valid: np.ndarray,
+    Y_train: np.ndarray,
+    Y_valid: np.ndarray,
+    users: int,
+) -> (Sequential, np.ndarray, object):
     """
     Create keras model from training data and evaluate it using valid data.
 
@@ -103,21 +113,30 @@ def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_trai
     model.add(Dense(units=60, input_dim=60, activation="relu"))
     model.add(Dense(units=128, activation="relu"))
     model.add(Dense(units=256, activation="relu"))
-    # model.add(Dense(units=512, activation="relu"))
+    model.add(Dense(units=512, activation="relu"))
     model.add(Dense(units=users, activation="softmax"))
 
-    model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"], run_eagerly=True)
+    model.compile(
+        loss="categorical_crossentropy",
+        optimizer="adam",
+        metrics=["accuracy"],
+        run_eagerly=True,
+    )
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=256, batch_size=128)
+    history = model.fit(
+        X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=256, batch_size=64
+    )
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 
     return model, central_vector, history
 
 
-def enroll_users(model: Sequential, eval_data: dict, central_vector: np.ndarray) -> (dict, dict):
+def enroll_users(
+    model: Sequential, eval_data: dict, central_vector: np.ndarray
+) -> (dict, dict):
     """
     Create a biometric template for every user in a dictionary.
 
@@ -135,7 +154,9 @@ def enroll_users(model: Sequential, eval_data: dict, central_vector: np.ndarray)
         blocks = 0
 
         while (blocks + 1) * block_size < len(eval_data[person_id]):
-            user_blocks.append(eval_data[person_id][blocks * block_size: (blocks + 1) * block_size])
+            user_blocks.append(
+                eval_data[person_id][blocks * block_size : (blocks + 1) * block_size]
+            )
             blocks += 1
 
         tst = len(user_blocks) // 5
@@ -182,7 +203,9 @@ def cross_evaluate(enroll: dict, test: dict) -> (np.ndarray, np.ndarray):
     return confidence_TP_MLP, confidence_TN_MLP
 
 
-def confidence_figure(confidence_TP_MLP: np.ndarray, confidence_TN_MLP: np.ndarray) -> None:
+def confidence_figure(
+    confidence_TP_MLP: np.ndarray, confidence_TN_MLP: np.ndarray
+) -> None:
     """
     Draw two figures and save them into files for future use.
 
@@ -268,7 +291,9 @@ def main() -> None:
     # Prepare data for the model
     X, Y, X_train, X_valid, Y_train, Y_valid, users_num = prepare_data(eval_data)
     # Create model and central vector
-    model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid, users_num)
+    model, central_vector, history = create_model(
+        X, X_train, X_valid, Y_train, Y_valid, users_num
+    )
     # Create test users' enroll templates and test samples
     enroll, test = enroll_users(model, eval_data, central_vector)
     # Evaluate the model using cross evaluation (every user with everyone)

@@ -18,11 +18,10 @@ def create_sample(model, central_vector, data):
     block_size = 60
     i = 0
     temp = []
-    while (i + 1) * block_size <= len(data):
+    while (i + 1) * block_size < len(data):
         temp.append(data[block_size * i : block_size * (i + 1)])
         i += 1
     temp = np.array(temp)
-    temp.reshape(i, block_size)
     output = model.predict(temp)
     sample = np.mean(output, axis=0)
     sample = np.subtract(sample, central_vector)
