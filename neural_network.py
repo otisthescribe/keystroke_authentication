@@ -52,7 +52,7 @@ def read_data():
     with open(f"./freeText/free_text_data.pickle", "rb") as file:
         users = pickle.load(file)
         train_data = {k: v for k, v in users.items() if k in range(400)}
-        eval_data = {k: v for k, v in users.items() if k in range(400, 600)}
+        eval_data = {k: v for k, v in users.items() if k in range(400, 500)}
 
     return train_data, eval_data
 
@@ -104,7 +104,7 @@ def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_trai
     model.add(Dense(units=60, input_dim=60, activation="relu"))
     model.add(Dense(units=128, activation="relu"))
     model.add(Dense(units=256, activation="relu"))
-    model.add(Dense(units=512, activation="relu"))
+    # model.add(Dense(units=512, activation="relu"))
     model.add(Dense(units=users, activation="softmax"))
 
     model.compile(
@@ -117,7 +117,7 @@ def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_trai
 
     # batch size indicates the number of observations to calculate before updating the weights
     history = model.fit(
-        X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=256, batch_size=64
+        X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=64
     )
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
@@ -278,9 +278,7 @@ def main() -> None:
     # Prepare data for the model
     X, Y, X_train, X_valid, Y_train, Y_valid, users_num = prepare_data(eval_data)
     # Create model and central vector
-    model, central_vector, history = create_model(
-        X, X_train, X_valid, Y_train, Y_valid, users_num
-    )
+    model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid, users_num)
     # Create test users' enroll templates and test samples
     enroll, test = enroll_users(model, eval_data, central_vector)
     # Evaluate the model using cross evaluation (every user with everyone)

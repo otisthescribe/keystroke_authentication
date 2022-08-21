@@ -4,9 +4,7 @@ import pickle
 
 
 def transform_file(file, drop_columns):
-    path = "../Free text dataset/"
-    filename = path + file
-    data1 = pd.read_csv(filename, encoding="utf-8", sep="\t")
+    data1 = pd.read_csv(file, encoding="utf-8", sep="\t")
     data1.drop(drop_columns, inplace=True, axis=1)
     data1.rename(columns={"ReviewMeta": "Keystrokes"}, inplace=True)
     data1.sort_values(by="UserName", inplace=True)
@@ -87,7 +85,7 @@ def create_dict(data):
 
 
 def save_to_file(dictionary):
-    with open("./freeText/free_text_data.pickle", "wb") as file:
+    with open("free_text_data.pickle", "wb") as file:
         pickle.dump(dictionary, file)
 
 
