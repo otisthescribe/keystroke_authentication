@@ -1,13 +1,15 @@
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 from keras.layers import Dense
 from keras.models import Sequential, load_model
 from keras.utils import to_categorical
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+
+
+BLOCK_SIZE = 60
+USERS = 400
 
 
 def load_model_from_dir(directory: str = "./model") -> (Sequential, np.ndarray):
@@ -42,32 +44,18 @@ def check_score(sample: np.ndarray, template: np.ndarray) -> float:
     return score[0][0]
 
 
-def read_data(filename: str = "sample_dataset.csv") -> (dict, dict):
-    """
-    Read data from filename and divide it into training and
-    evaluation data.
-    Training data consists of 41 people's samples.
-    Evaluation data consists of 10 people's samples.
+def read_data():
 
-    :param filename: string indicating the filename
-    :return: tuple of two dictonaries
-    """
-    df = pd.read_csv(filename, header=None)
-    train_data = {}
-    eval_data = {}
-    # make it universal, so that other file with data will work too
-    for i in range(41):
-        temp = df.iloc[400 * i: 400 * (i + 1)]
-        train_data[i] = np.concatenate(temp.to_numpy())
+    with open("./data/train_user_data.pickle", 'rb') as file:
+        train_data = pickle.load(file)
 
-    for i in range(41, 51):
-        temp = df.iloc[400 * i: 400 * (i + 1)]
-        eval_data[i] = np.concatenate(temp.to_numpy())
+    with open("./data/eval_user_data.pickle", 'rb') as file:
+        eval_data = pickle.load(file)
 
     return train_data, eval_data
 
 
-def prepare_data(train_data: dict) -> (np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray):
+def prepare_data(train_data: dict):
     """
     Prepare data for model training. Divide data into train and valid.
 
@@ -76,29 +64,20 @@ def prepare_data(train_data: dict) -> (np.ndarray, np.ndarray, np.ndarray, np.nd
     """
     X = []
     Y = []
-    block_size = 60
 
     for person_id in train_data.keys():
-        # for each person there is a matrix 133 x 60
-        for location in range(0, 8000 - block_size, block_size):
-            X.append(train_data[person_id][location: location + block_size])
+        for sample in train_data[person_id]:
+            X.append(sample)
             Y.append(person_id)
 
     X = np.array(X)
     Y = np.array(Y)
 
-    Y_oneshot = to_categorical(Y, num_classes=41)
+    Y_oneshot = to_categorical(Y, num_classes=USERS)
     X_train, X_valid, Y_train, Y_valid = train_test_split(
         X, Y_oneshot, test_size=0.2, random_state=123
     )
     return X, Y, X_train, X_valid, Y_train, Y_valid
-
-
-def feature_scaling(X_train, X_valid):
-    sc = StandardScaler()
-    X_train = sc.fit_transform(X_train)
-    X_valid = sc.fit_transform(X_valid)
-    return X_train, X_valid
 
 
 def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_train: np.ndarray,
@@ -115,15 +94,16 @@ def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_trai
     """
     # THIS PART NEEDS TO BE REVISED - HOW MANY NEURONS AND HOW MANY LAYERS
     model = Sequential()
-    model.add(Dense(units=60, input_dim=60, activation="relu"))
-    model.add(Dense(units=56, activation="relu"))
-    model.add(Dense(units=41, activation="softmax"))
+    model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
+    model.add(Dense(units=128, activation="relu"))
+    model.add(Dense(units=256, activation="relu"))
+    model.add(Dense(units=USERS, activation="softmax"))
 
     model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=16)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=64)
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 
@@ -142,30 +122,25 @@ def enroll_users(model: Sequential, eval_data: dict, central_vector: np.ndarray)
     enroll = {}  # klucz = osoba ; wartosc = template
     test = {}  # klucz = osoba ; wartosc = tab[5]
 
-    probes_number = 10
     for person_id in eval_data.keys():
 
+        SEP = (len(eval_data[person_id]) * 2) // 3
+
         # ENROLLMENT VECTOR
-        temp = []
-        for location in range(0, probes_number):
-            data = eval_data[person_id][60 * location: 60 * (location + 1)]
-            temp.append(data)
+        temp = eval_data[person_id][:SEP]
         output = model.predict(np.array(temp))
         out_vector = np.mean(output, axis=0)
         enroll[person_id] = np.subtract(out_vector, central_vector)
 
         # TEST VECTORS
         test_vectors = []
-        for i in range(probes_number):
-            temp = []
-            for location in range(
-                    probes_number * (i + 1), probes_number * (i + 1) + probes_number
-            ):
-                data = eval_data[person_id][60 * location: 60 * (location + 1)]
-                temp.append(data)
-            output = model.predict(np.array(temp))
-            out_vector = np.mean(output, axis=0)
-            test_vectors.append(np.subtract(out_vector, central_vector))
+        temp = eval_data[person_id][SEP:]
+        output = model.predict(np.array(temp))
+        out_vector = np.mean(output, axis=0)
+        test_vectors.append(np.subtract(out_vector, central_vector))
+        # for sample in output:
+        #     # out_vector = np.mean(output, axis=0)
+        #     test_vectors.append(np.subtract(sample, central_vector))
         test[person_id] = np.array(test_vectors)
 
     return enroll, test
@@ -192,7 +167,8 @@ def cross_evaluate(enroll: dict, test: dict) -> (np.ndarray, np.ndarray):
         for userB in test.keys():
             if userB != userA:
                 for t in test[userB]:
-                    b = cosine_similarity(userA_model, np.expand_dims(t, axis=0))
+                    temp = np.expand_dims(t, axis=0)
+                    b = cosine_similarity(userA_model, temp)
                     confidence_TN_MLP.append(b)
 
     confidence_TP_MLP = np.squeeze(np.array(confidence_TP_MLP))

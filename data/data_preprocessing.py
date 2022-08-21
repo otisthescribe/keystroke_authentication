@@ -2,17 +2,24 @@ import pandas as pd
 import os
 import pickle
 
+# CONSTANTS
+
+LENGTH = 60  # length of an entry array in neural network
+TRAIN_USERS = 400  # number of train users (it will be the length of an output vector)
+EVAL_USERS = 200  # number of eval users (it will generate more data to cross evaluate)
+
 directory = "../../Keystrokes - 16GB/Keystrokes/files"
 user_count = 0
-train = {}
-test = {}
+train_data = {}
+eval_data = {}
+
 
 for filename in os.listdir(directory):
-    if user_count >= 400 + 200:
+    if user_count >= TRAIN_USERS + EVAL_USERS:
         with open(f"train_user_data.pickle", 'wb') as file:
-            pickle.dump(train, file)
-        with open(f"test_user_data.pickle", 'wb') as file:
-            pickle.dump(train, file)
+            pickle.dump(train_data, file)
+        with open(f"eval_user_data.pickle", 'wb') as file:
+            pickle.dump(eval_data, file)
         print("Data preprocessing finished successfully.")
         break
 
@@ -38,12 +45,21 @@ for filename in os.listdir(directory):
             merged = [0] * (len(hold) + len(between))
             merged[::2] = hold
             merged[1::2] = between
-            user_data.append(merged)
-        if user_count < 400:
-            train[user_count] = user_data
-        else:
-            test[user_count] = user_data
+            if len(merged) < LENGTH:
+                # This sample does not fullfil the demands for our neural network
+                # It does not have at least 60 elements
+                raise Exception
 
+            # Cut the data as we only need 60 elements
+            user_data.append(merged[:60])
+
+        if user_count < TRAIN_USERS:
+            train_data[user_count] = user_data
+        else:
+            eval_data[user_count] = user_data
+        print(f"({user_count}) {filename} -- passed -- ({len(user_data)})")
+        for i in user_data:
+            print(f"\t{len(i)}: {i}")
         user_count += 1
 
     except Exception:

@@ -1,35 +1,35 @@
 import os.path
 import numpy as np
 import pickle
-import diceware
-from neural_network import load_model_from_dir
+from neural_network import load_model_from_dir, BLOCK_SIZE
 from keystrokes_recorder import record
 import random
 
 
-def generate_passphrase2():
-    num = 4
-    options = diceware.handle_options(args=[f"-n {num}", "-d "])
-    passphrase = diceware.get_passphrase(options=options)
-    return passphrase
-
-
 def generate_passphrase():
-    with open("./pass.txt") as file:
+    """
+    Get the random passphrase from the file passphrase.txt.
+    This file contains a lot of easy sentences that can
+    be used to register and authenticate user.
+    :return:
+    """
+    with open("./passphrase.txt") as file:
         lines = file.readlines()
         passphrase = lines[random.randint(0, len(lines) - 1)]
         passphrase = passphrase.replace("\n", "")
     return passphrase
 
 
-def create_template(model, central_vector, data):
-    block_size = 60
-    i = 0
-    temp = []
-    while (i + 1) * block_size <= len(data):
-        temp.append(data[block_size * i : block_size * (i + 1)])
-        i += 1
-    temp = np.array(temp)
+def create_template(model, central_vector, samples):
+    """
+    Given the user's data (input) calculate the template.
+    Use the model to get a vector and central vector to normalize the output.
+    :param model: keras model
+    :param central_vector: central vector saved in model directory
+    :param samples: array of user's input
+    :return: template vector
+    """
+    temp = np.array(samples)
     output = model.predict(temp)
     template = np.mean(output, axis=0)
     template = np.subtract(template, central_vector)
@@ -37,17 +37,25 @@ def create_template(model, central_vector, data):
 
 
 def register_template(model, central_vector):
+    """
+
+    :param model:
+    :param central_vector:
+    :return:
+    """
     passphrase = generate_passphrase()
     probes_number = 5
     print(f"Rewrite this sentence {probes_number} times:")
     print(passphrase)
     samples = []
-    for i in range(probes_number):
-        print(f"({i+1}): ", end="")
+    while len(samples) < probes_number:
+        print(f"({len(samples) + 1}): ", end="")
         sample = record()
-        samples.append(sample)
-    data = np.concatenate(np.array(samples))
-    template = create_template(model, central_vector, data)
+        if len(sample) < BLOCK_SIZE:
+            print("\nRead the sentence again. Input should be at least 30 characters!")
+        samples.append(sample[:BLOCK_SIZE])
+
+    template = create_template(model, central_vector, samples)
     return template, passphrase
 
 
