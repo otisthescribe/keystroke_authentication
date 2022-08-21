@@ -49,7 +49,7 @@ def read_data():
 
     :return: tuple of two dictonaries
     """
-    with open(f"./freeText/free_text_data.pickle", "rb") as file:
+    with open(f"./data/free_text_data.pickle", "rb") as file:
         users = pickle.load(file)
         train_data = {k: v for k, v in users.items() if k in range(400)}
         eval_data = {k: v for k, v in users.items() if k in range(400, 500)}
