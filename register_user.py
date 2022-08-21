@@ -53,6 +53,7 @@ def register_template(model, central_vector):
         sample = record()
         if len(sample) < BLOCK_SIZE:
             print("\nRead the sentence again. Input should be at least 30 characters!")
+            continue
         samples.append(sample[:BLOCK_SIZE])
 
     template = create_template(model, central_vector, samples)
