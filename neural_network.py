@@ -57,9 +57,7 @@ def read_data():
     return train_data, eval_data
 
 
-def prepare_data(
-    train_data: dict,
-) -> (np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray):
+def prepare_data(train_data: dict) -> (np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray):
     """
     Prepare data for model training. Divide data into train and valid.
 
@@ -89,14 +87,7 @@ def prepare_data(
     return X, Y, X_train, X_valid, Y_train, Y_valid, users_num
 
 
-def create_model(
-    X: np.ndarray,
-    X_train: np.ndarray,
-    X_valid: np.ndarray,
-    Y_train: np.ndarray,
-    Y_valid: np.ndarray,
-    users: int,
-) -> (Sequential, np.ndarray, object):
+def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_train: np.ndarray, Y_valid: np.ndarray, users: int) -> (Sequential, np.ndarray, object):
     """
     Create keras model from training data and evaluate it using valid data.
 
@@ -134,9 +125,7 @@ def create_model(
     return model, central_vector, history
 
 
-def enroll_users(
-    model: Sequential, eval_data: dict, central_vector: np.ndarray
-) -> (dict, dict):
+def enroll_users(model: Sequential, eval_data: dict, central_vector: np.ndarray) -> (dict, dict):
     """
     Create a biometric template for every user in a dictionary.
 
@@ -203,9 +192,7 @@ def cross_evaluate(enroll: dict, test: dict) -> (np.ndarray, np.ndarray):
     return confidence_TP_MLP, confidence_TN_MLP
 
 
-def confidence_figure(
-    confidence_TP_MLP: np.ndarray, confidence_TN_MLP: np.ndarray
-) -> None:
+def confidence_figure(confidence_TP_MLP: np.ndarray, confidence_TN_MLP: np.ndarray) -> None:
     """
     Draw two figures and save them into files for future use.
 
