@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 from keystrokes_recorder import record
 from neural_network import check_score
-from register_user import user_exists
+from register_user import user_exists, generate_passphrase
 from neural_network import load_model_from_dir, BLOCK_SIZE
 
 
@@ -36,7 +36,8 @@ def authenticate_user(model, central_vector, username):
     user = get_user_data(username)
     template, passphrase = user["template"], user["passphrase"]
     print("Rewrite this sentence:")
-    print(passphrase)
+    # print(passphrase)
+    print(generate_passphrase())
     print(f"--> ", end="")
     sample = record()
     while len(sample) < BLOCK_SIZE:

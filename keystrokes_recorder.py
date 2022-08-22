@@ -22,8 +22,8 @@ def on_release(key):
     key_up = key.time
 
     if not first:
-        hold = round(key_up - key_down, 4)
-        between = round(key_down - prev_key_up, 4)
+        hold = int((key_up - key_down) * 1000)
+        between = int((key_down - prev_key_up) * 1000)
         keystrokes.append(hold)
         keystrokes.append(between)
     else:
@@ -47,5 +47,7 @@ def record():
 
 
 if __name__ == "__main__":
+    print("Try it out: ", end="")
     keys = record()
+    print()
     print(keys)

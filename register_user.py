@@ -43,12 +43,12 @@ def register_template(model, central_vector):
     :param central_vector:
     :return:
     """
-    passphrase = generate_passphrase()
+    passphrase = "Temporarely unavailable."
     probes_number = 5
-    print(f"Rewrite this sentence {probes_number} times:")
-    print(passphrase)
+    print(f"Rewrite these {probes_number} sentences:")
     samples = []
     while len(samples) < probes_number:
+        print(generate_passphrase())
         print(f"({len(samples) + 1}): ", end="")
         sample = record()
         if len(sample) < BLOCK_SIZE:

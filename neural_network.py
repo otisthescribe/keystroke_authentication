@@ -7,7 +7,6 @@ from keras.utils import to_categorical
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
 
-
 BLOCK_SIZE = 60
 USERS = 400
 
@@ -97,6 +96,7 @@ def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_trai
     model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
     model.add(Dense(units=128, activation="relu"))
     model.add(Dense(units=256, activation="relu"))
+    model.add(Dense(units=400, activation="relu"))
     model.add(Dense(units=512, activation="relu"))
     model.add(Dense(units=USERS, activation="softmax"))
 
@@ -132,6 +132,8 @@ def enroll_users(model: Sequential, eval_data: dict, central_vector: np.ndarray)
         output = model.predict(np.array(temp))
         out_vector = np.mean(output, axis=0)
         enroll[person_id] = np.subtract(out_vector, central_vector)
+        print(enroll[person_id])
+        print(central_vector)
 
         # TEST VECTORS
         test_vectors = []
@@ -265,7 +267,6 @@ def main() -> None:
     eval_data, train_data = read_data()
     # Prepare data for the model
     X, Y, X_train, X_valid, Y_train, Y_valid = prepare_data(eval_data)
-    # X_train, X_valid = feature_scaling(X_train, X_valid) <-- data preprocessing
     # Create model and central vector
     model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid)
     # Create test users' enroll templates and test samples

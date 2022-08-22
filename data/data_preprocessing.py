@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 import pickle
 
@@ -34,8 +35,8 @@ for filename in os.listdir(directory):
         # but will prepare the data for our neural network (keylogger works the same way)
         data['RELEASE_TIME'] = data['RELEASE_TIME'].sort_values(ascending=True).values
         # data.sort_values(by=['SECTION_ID', 'RELEASE_TIME'], inplace=True, ascending=True)
-        data['HOLD'] = (data['RELEASE_TIME'] - data['PRESS_TIME']) / 1000
-        data['BETWEEN'] = (data['PRESS_TIME'] - data['RELEASE_TIME'].shift()) / 1000
+        data['HOLD'] = data['RELEASE_TIME'] - data['PRESS_TIME']
+        data['BETWEEN'] = data['PRESS_TIME'] - data['RELEASE_TIME'].shift()
         # GROUP AND MERGE DATA FROM EACH SESSION USER HAD
         grouped = data.groupby('SECTION_ID')  # .apply(lambda group: group.iloc[1:, 1:])
         user_data = []
@@ -51,15 +52,16 @@ for filename in os.listdir(directory):
                 raise Exception
 
             # Cut the data as we only need 60 elements
+            merged = [int(merged[i]) for i in range(len(merged))]
             user_data.append(merged[:60])
 
         if user_count < TRAIN_USERS:
             train_data[user_count] = user_data
         else:
             eval_data[user_count] = user_data
-        # print(f"({user_count}) {filename} -- passed -- ({len(user_data)})")
-        # for i in user_data:
-        #     print(f"\t{len(i)}: {i}")
+        print(f"({user_count}) {filename} -- passed -- ({len(user_data)})")
+        for i in user_data:
+            print(f"\t{len(i)}: {i}")
         user_count += 1
 
     except Exception:
