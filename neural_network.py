@@ -75,7 +75,7 @@ def prepare_data(train_data: dict):
 
     Y_oneshot = to_categorical(Y, num_classes=USERS)
     X_train, X_valid, Y_train, Y_valid = train_test_split(
-        X, Y_oneshot, test_size=0.2, random_state=123
+        X, Y_oneshot, test_size=0.3, random_state=123
     )
     return X, Y, X_train, X_valid, Y_train, Y_valid
 
@@ -97,13 +97,14 @@ def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_trai
     model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
     model.add(Dense(units=128, activation="relu"))
     model.add(Dense(units=256, activation="relu"))
+    model.add(Dense(units=512, activation="relu"))
     model.add(Dense(units=USERS, activation="softmax"))
 
     model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=64)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=16)
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 

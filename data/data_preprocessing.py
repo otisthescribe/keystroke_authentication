@@ -6,7 +6,7 @@ import pickle
 
 LENGTH = 60  # length of an entry array in neural network
 TRAIN_USERS = 400  # number of train users (it will be the length of an output vector)
-EVAL_USERS = 200  # number of eval users (it will generate more data to cross evaluate)
+EVAL_USERS = 100  # number of eval users (it will generate more data to cross evaluate)
 
 directory = "../../Keystrokes - 16GB/Keystrokes/files"
 user_count = 0
@@ -57,9 +57,9 @@ for filename in os.listdir(directory):
             train_data[user_count] = user_data
         else:
             eval_data[user_count] = user_data
-        print(f"({user_count}) {filename} -- passed -- ({len(user_data)})")
-        for i in user_data:
-            print(f"\t{len(i)}: {i}")
+        # print(f"({user_count}) {filename} -- passed -- ({len(user_data)})")
+        # for i in user_data:
+        #     print(f"\t{len(i)}: {i}")
         user_count += 1
 
     except Exception:
