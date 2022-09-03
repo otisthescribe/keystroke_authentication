@@ -5,10 +5,12 @@ This project focuses on implementing keystroke dynamics biometrics as part of th
 We are using python [keyboard](https://pypi.org/project/keyboard/) library to record keystrokes and 
 [keras](https://keras.io/) to create and train neural network model.
 
-Training and evaluation data are stored in "simple_dataset.csv" file. Data was extracted from
-[DSL_StrongPasswordData.csv](https://www.cs.cmu.edu/~keystroke/DSL-StrongPasswordData.csv) from a
-[Comparing Anomaly-Detection Algorithms for Keystroke Dynamics](https://www.cs.cmu.edu/~maxion/pubs/KillourhyMaxion09.pdf)
-project by Kevin Killourhy and Roy Maxion.
+Training and evaluation data is stored in separate pickle files in data folder.
+Two datasets were used to prepare training and evaluation data:
+1. [Keystroke100 Dataset](http://personal.ie.cuhk.edu.hk/~ccloy/downloads_keystroke100.html)
+2. [DSL-StrongPasswordData](http://www.cs.cmu.edu/~keystroke/)
+
+Both original datasets are in the data folder.
 
 Authors: 
 - Grzegorz Kmita (gkmita@student.agh.edu.pl)
@@ -37,8 +39,8 @@ Plots will be saved in ./plots directory.
 
 ## Registering user
 
-A user needs to be registered in order to create their biometric template. Login, template and passphrase that need to be
-rewritten 5 times during registration process are stored as an entry in user_data.pickle.
+A user needs to be registered in order to create their biometric template. A user needs to provide passwords 5 times.
+A password must be at least 8 characters long. In fact only the first 8 characters are taken into account.
 
 To register user run:
 
@@ -50,17 +52,14 @@ Registration process will look like that:
 
 ```
 $ username: [create your username here]
-$ PASSPHRASE = [random passphrase will be provided here]
-$ (1): [rewrite passphrase here]
+$ (1): [provide a password here]
 $ ...
-$ (5): [rewrite passphrase 5 times]
+$ (5): [provide a password here]
 ```
 
-Passphrase is chosen from the file pass.txt. It is not sensitive data so it doesn't need to be protected.
-Passphrase can look like this:
-```
-"The wind was strong today in the city"
-```
+Passwords are not checked because the script does not read the input directly, only the time between
+two consecutive keystrokes. It is possible to provide different password each time, but it will reduce the
+biometric score.
 
 
 ## Authenticating user
@@ -78,7 +77,6 @@ $ python3 authenticate_user.py
 Authentication process will look like that:
 
 ```
-$ username: [create your username here]
-$ PASSPHRASE = [random passphrase will be provided here]
-$ --> [rewrite passphrase here]
+$ username: [provide the username]
+$ --> [provide a password here]
 ```

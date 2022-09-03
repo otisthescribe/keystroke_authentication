@@ -1,17 +1,14 @@
 import pandas as pd
-import numpy as np
-import os
 import pickle
 
 users = {}
 
 # BAZA DANYCH Z 51 użytkownikami
 
-data51 = pd.read_csv('DSL-StrongPasswordData (1).csv')
+data51 = pd.read_csv('DSL-StrongPasswordData.csv')
 data51 = data51.drop(['sessionIndex', 'rep', 'subject'], axis=1)
 data51.drop(data51.iloc[:, 0::3], axis=1, inplace=True)
 data51.drop(data51.iloc[:, 0::2], axis=1, inplace=True)
-# print(data51)
 data51['combined'] = data51.values.tolist()
 data51.drop(data51.iloc[:, 0:-1:], axis=1, inplace=True)
 user_count = -1
@@ -35,12 +32,9 @@ for i in range(1, 101):
     for index, row in data.iterrows():
         users[i + 50].append(row['combined'])
 
-# TEST
-
-print(len(users.keys()))
+# print(len(users.keys()))
 
 # CREATE TRAIN AND EVAL DICTIONARIES
-
 # We will divide dataset into train (120 users) and eval (31 users)
 
 eval_data = {}
@@ -50,7 +44,7 @@ for i in range(119, 151):
     eval_data[eval_count] = users.pop(i)
     eval_count += 1
 
-# SAVE DATA
+# SAVE THE DATA
 
 with open("train_user_data.pickle", 'wb') as file:
     pickle.dump(users, file)
