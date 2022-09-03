@@ -32,7 +32,7 @@ def create_template(model, central_vector, samples):
     temp = np.array(samples)
     output = model.predict(temp)
     template = np.mean(output, axis=0)
-    template = np.subtract(template, central_vector)
+    # template = np.subtract(template, central_vector)
     return template
 
 
@@ -43,21 +43,19 @@ def register_template(model, central_vector):
     :param central_vector:
     :return:
     """
-    passphrase = "Temporarely unavailable."
     probes_number = 5
-    print(f"Rewrite these {probes_number} sentences:")
+    print(f"Sumbit your password {probes_number} times:")
     samples = []
     while len(samples) < probes_number:
-        print(generate_passphrase())
         print(f"({len(samples) + 1}): ", end="")
         sample = record()
-        if len(sample) < BLOCK_SIZE:
-            print("\nRead the sentence again. Input should be at least 30 characters!")
+        if len(sample) < BLOCK_SIZE + 1:
+            print(f"\nPassword should has at least {BLOCK_SIZE + 1} characters!")
             continue
         samples.append(sample[:BLOCK_SIZE])
 
     template = create_template(model, central_vector, samples)
-    return template, passphrase
+    return template
 
 
 def user_exists(username):
@@ -68,7 +66,7 @@ def user_exists(username):
                 return True
 
 
-def save_user(username, template, passphrase):
+def save_user(username, template):
     """
     Save user data to file.
     """
@@ -78,7 +76,7 @@ def save_user(username, template, passphrase):
     else:
         users = {}
 
-    users[username] = {"template": template, "passphrase": passphrase}
+    users[username] = {"template": template}
 
     with open("users_data.pickle", "wb") as handle:
         pickle.dump(users, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -91,8 +89,8 @@ def main():
         print("User already exists!")
         username = input("username: ")
 
-    template, passphrase = register_template(model, central_vector)
-    save_user(username, template, passphrase)
+    template = register_template(model, central_vector)
+    save_user(username, template)
 
 
 if __name__ == "__main__":

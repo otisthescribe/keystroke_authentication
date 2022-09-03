@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 from keystrokes_recorder import record
 from neural_network import check_score
-from register_user import user_exists, generate_passphrase
+from register_user import user_exists
 from neural_network import load_model_from_dir, BLOCK_SIZE
 
 
@@ -19,7 +19,7 @@ def create_sample(model, central_vector, data):
     temp = np.array([data])
     output = model.predict(temp)
     sample = np.mean(output, axis=0)
-    sample = np.subtract(sample, central_vector)
+    # sample = np.subtract(sample, central_vector)
     return sample
 
 
@@ -34,17 +34,15 @@ def authenticate_user(model, central_vector, username):
     :return: biometric score (float)
     """
     user = get_user_data(username)
-    template, passphrase = user["template"], user["passphrase"]
-    print("Rewrite this sentence:")
-    # print(passphrase)
-    print(generate_passphrase())
+    template = user["template"]
+    print("Sumbit your password:")
     print(f"--> ", end="")
     sample = record()
-    while len(sample) < BLOCK_SIZE:
-        print("\nRead the sentence again. Input should be at least 30 characters!")
+    while len(sample) < BLOCK_SIZE + 1:
+        print(f"\nPassword should has at least {BLOCK_SIZE + 1} characters!")
         print(f"--> ", end="")
         sample = record()
-    probe = create_sample(model, central_vector, sample[:60])
+    probe = create_sample(model, central_vector, sample[:BLOCK_SIZE])
     return check_score(template, probe)
 
 

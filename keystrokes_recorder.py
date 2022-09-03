@@ -22,9 +22,7 @@ def on_release(key):
     key_up = key.time
 
     if not first:
-        hold = int((key_up - key_down) * 1000)
         between = int((key_down - prev_key_up) * 1000)
-        keystrokes.append(hold)
         keystrokes.append(between)
     else:
         first = False
