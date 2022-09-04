@@ -37,6 +37,18 @@ $ python3 neural_network.py
 Model and central vector will be saved for future use in ./model directory.
 Plots will be saved in ./plots directory.
 
+Model training will look like that:
+
+![Model training process](/screenshots/model_training.png)
+
+There will be 4 plots produced. Two of them are related to model training and 
+two of them are related to the evaluation data. Below you can see examples of these plots:
+
+![True positive and true negative confidence](/plots/confidence_TP_TN.png)
+![Threshold and probability](/plots/threshold_probability.png)
+![Model accuracy](/plots/model_accuracy.png)
+![Model loss](/plots/model_loss.png)
+
 ## Registering user
 
 A user needs to be registered in order to create their biometric template. A user needs to provide passwords 5 times.
@@ -52,10 +64,13 @@ Registration process will look like that:
 
 ```
 $ username: [create your username here]
+$ Sumbit your password [probes_number] times:
 $ (1): [provide a password here]
 $ ...
-$ (5): [provide a password here]
+$ (probes_num): [provide a password here]
 ```
+
+![Registering user](./screenshots/registering_user.png)
 
 Passwords are not checked because the script does not read the input directly, only the time between
 two consecutive keystrokes. It is possible to provide different password each time, but it will reduce the
@@ -80,3 +95,5 @@ Authentication process will look like that:
 $ username: [provide the username]
 $ --> [provide a password here]
 ```
+
+![Authenticating user](./screenshots/authenticating_user.png)

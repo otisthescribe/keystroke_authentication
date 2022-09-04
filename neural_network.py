@@ -7,8 +7,8 @@ from keras.utils import to_categorical
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
 
-BLOCK_SIZE = 7
-USERS = 120
+BLOCK_SIZE = 7  # number of attributes - it will be the size of an input vector
+USERS = 120  # number of users - it will be the size of an output vector
 
 
 def load_model_from_dir(directory="./model"):
@@ -20,7 +20,6 @@ def load_model_from_dir(directory="./model"):
     :return: Tuple with neural network model and central vector
     """
 
-    # CHECK IF THE FOLDER EXISTS
     model = load_model(directory)
     with open(directory + "/central_vector.pickle", "rb") as file:
         central_vector = pickle.load(file)
@@ -52,10 +51,10 @@ def read_data():
     :return: train_data and eval_data dictionaries
     """
 
-    with open("./data/train_user_data.pickle", 'rb') as file:
+    with open("./data/train_user_data.pickle", "rb") as file:
         train_data = pickle.load(file)
 
-    with open("./data/eval_user_data.pickle", 'rb') as file:
+    with open("./data/eval_user_data.pickle", "rb") as file:
         eval_data = pickle.load(file)
 
     return train_data, eval_data
@@ -102,16 +101,22 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     # THIS PART NEEDS TO BE REVISED - HOW MANY NEURONS AND HOW MANY LAYERS
     model = Sequential()
     model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
+    model.add(Dense(units=8, activation="relu"))
     model.add(Dense(units=16, activation="relu"))
     model.add(Dense(units=32, activation="relu"))
     model.add(Dense(units=64, activation="relu"))
+    model.add(Dense(units=96, activation="relu"))
     model.add(Dense(units=USERS, activation="softmax"))
 
-    model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+    model.compile(
+        loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
+    )
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=16)
+    history = model.fit(
+        X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=16
+    )
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 
@@ -128,11 +133,12 @@ def enroll_users(model, eval_data, central_vector):
     :return: two dictionaries with enroll vector and test vectors for every user
     """
 
-    enroll = {}  # klucz = osoba ; wartosc = template
-    test = {}  # klucz = osoba ; wartosc = samples (1 or more)
+    enroll = {}  # key = person_id ; value = template
+    test = {}  # key = person_id ; value = samples (1 or more)
 
     for person_id in eval_data.keys():
 
+        # Divide the dataset into enroll and test vectors
         SEP = (len(eval_data[person_id]) * 2) // 3
 
         # ENROLLMENT VECTOR
@@ -218,6 +224,7 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
 def model_accuracy_figure(history):
     """
     Draw two figures about the accuracy and loss of model during training
+
     :param history: historical data of model training
     """
 
@@ -244,9 +251,10 @@ def model_accuracy_figure(history):
     plt.show()
 
 
-def save_model(model, directory ="model"):
+def save_model(model, directory="model"):
     """
     Save model to ./model folder
+
     :param model: keras model
     :param directory: string with directory name to store model in
     """
@@ -257,6 +265,7 @@ def save_model(model, directory ="model"):
 def save_central_vector(central_vector):
     """
     Save central vector for the future use
+
     :param central_vector: 1 x 41 matrix representing central vector
     """
 

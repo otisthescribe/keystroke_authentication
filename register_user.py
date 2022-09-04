@@ -9,6 +9,7 @@ def create_template(model, samples):
     """
     Given the user's data (input) calculate the template.
     Use the model to get a vector and central vector to normalize the output.
+
     :param model: keras model
     :param samples: array of user's input
     :return: template vector
@@ -24,11 +25,12 @@ def register_template(model):
     """
     Read user's input [probes_number] times and
     create a biometric template out of it.
+
     :param model: keras model
     :return: biometric template
     """
 
-    probes_number = 5
+    probes_number = 10
     print(f"Sumbit your password {probes_number} times:")
     samples = []
     while len(samples) < probes_number:
