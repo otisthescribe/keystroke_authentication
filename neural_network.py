@@ -7,11 +7,11 @@ from keras.utils import to_categorical
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
 
-BLOCK_SIZE = 60
-USERS = 400
+BLOCK_SIZE = 7  # number of attributes - it will be the size of an input vector
+USERS = 120  # number of users - it will be the size of an output vector
 
 
-def load_model_from_dir(directory: str = "./model") -> (Sequential, np.ndarray):
+def load_model_from_dir(directory="./model"):
     """
     Load keras model from directory passed in argument.
     If no value is passed, the default "./model" directory is used.
@@ -19,14 +19,14 @@ def load_model_from_dir(directory: str = "./model") -> (Sequential, np.ndarray):
     :param directory: String indicating directory with neural network model
     :return: Tuple with neural network model and central vector
     """
-    # CHECK IF THE FOLDER EXISTS
+
     model = load_model(directory)
     with open(directory + "/central_vector.pickle", "rb") as file:
         central_vector = pickle.load(file)
     return model, central_vector
 
 
-def check_score(sample: np.ndarray, template: np.ndarray) -> float:
+def check_score(sample, template):
     """
     Checking the cosine similarity (which is a biometric score) between
     template and sample vectors.
@@ -35,6 +35,7 @@ def check_score(sample: np.ndarray, template: np.ndarray) -> float:
     :param template: Second vector
     :return: Float value indicating biometric score
     """
+
     # Transforming vectors so they are in proper dimensions
     a = np.expand_dims(sample, axis=0)
     b = np.expand_dims(template, axis=0)
@@ -44,23 +45,29 @@ def check_score(sample: np.ndarray, template: np.ndarray) -> float:
 
 
 def read_data():
+    """
+    Read data from two pickle files with training and evaluation data.
 
-    with open("./data/train_user_data.pickle", 'rb') as file:
+    :return: train_data and eval_data dictionaries
+    """
+
+    with open("./data/train_user_data.pickle", "rb") as file:
         train_data = pickle.load(file)
 
-    with open("./data/eval_user_data.pickle", 'rb') as file:
+    with open("./data/eval_user_data.pickle", "rb") as file:
         eval_data = pickle.load(file)
 
     return train_data, eval_data
 
 
-def prepare_data(train_data: dict):
+def prepare_data(train_data):
     """
     Prepare data for model training. Divide data into train and valid.
 
     :param train_data: dictionary with training data
     :return: tuple of six arrays
     """
+
     X = []
     Y = []
 
@@ -79,8 +86,7 @@ def prepare_data(train_data: dict):
     return X, Y, X_train, X_valid, Y_train, Y_valid
 
 
-def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_train: np.ndarray,
-                 Y_valid: np.ndarray, ) -> (Sequential, np.ndarray, object):
+def create_model(X, X_train, X_valid, Y_train, Y_valid):
     """
     Create keras model from training data and evaluate it using valid data.
 
@@ -91,27 +97,33 @@ def create_model(X: np.ndarray, X_train: np.ndarray, X_valid: np.ndarray, Y_trai
     :param Y_valid: array for output of valid data (from model)
     :return: model, central_vector, history data
     """
+
     # THIS PART NEEDS TO BE REVISED - HOW MANY NEURONS AND HOW MANY LAYERS
     model = Sequential()
     model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
-    model.add(Dense(units=128, activation="relu"))
-    model.add(Dense(units=256, activation="relu"))
-    model.add(Dense(units=400, activation="relu"))
-    model.add(Dense(units=512, activation="relu"))
+    model.add(Dense(units=8, activation="relu"))
+    model.add(Dense(units=16, activation="relu"))
+    model.add(Dense(units=32, activation="relu"))
+    model.add(Dense(units=64, activation="relu"))
+    model.add(Dense(units=96, activation="relu"))
     model.add(Dense(units=USERS, activation="softmax"))
 
-    model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+    model.compile(
+        loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
+    )
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=16)
+    history = model.fit(
+        X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=16
+    )
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 
     return model, central_vector, history
 
 
-def enroll_users(model: Sequential, eval_data: dict, central_vector: np.ndarray) -> (dict, dict):
+def enroll_users(model, eval_data, central_vector):
     """
     Create a biometric template for every user in a dictionary.
 
@@ -120,11 +132,13 @@ def enroll_users(model: Sequential, eval_data: dict, central_vector: np.ndarray)
     :param central_vector: array with vector from everyone's data
     :return: two dictionaries with enroll vector and test vectors for every user
     """
-    enroll = {}  # klucz = osoba ; wartosc = template
-    test = {}  # klucz = osoba ; wartosc = tab[5]
+
+    enroll = {}  # key = person_id ; value = template
+    test = {}  # key = person_id ; value = samples (1 or more)
 
     for person_id in eval_data.keys():
 
+        # Divide the dataset into enroll and test vectors
         SEP = (len(eval_data[person_id]) * 2) // 3
 
         # ENROLLMENT VECTOR
@@ -132,8 +146,6 @@ def enroll_users(model: Sequential, eval_data: dict, central_vector: np.ndarray)
         output = model.predict(np.array(temp))
         out_vector = np.mean(output, axis=0)
         enroll[person_id] = np.subtract(out_vector, central_vector)
-        print(enroll[person_id])
-        print(central_vector)
 
         # TEST VECTORS
         test_vectors = []
@@ -141,22 +153,21 @@ def enroll_users(model: Sequential, eval_data: dict, central_vector: np.ndarray)
         output = model.predict(np.array(temp))
         out_vector = np.mean(output, axis=0)
         test_vectors.append(np.subtract(out_vector, central_vector))
-        # for sample in output:
-        #     # out_vector = np.mean(output, axis=0)
-        #     test_vectors.append(np.subtract(sample, central_vector))
         test[person_id] = np.array(test_vectors)
 
     return enroll, test
 
 
-def cross_evaluate(enroll: dict, test: dict) -> (np.ndarray, np.ndarray):
+def cross_evaluate(enroll, test):
     """
     Cross evaluate accuracy of biometric templates with the same user's test vectors
     and with everyone else's test vectors.
+
     :param enroll: dictionary with enroll vectors
     :param test: dictionary with test vectors
     :return: two numpy arrays with true positives and true negatives
     """
+
     confidence_TP_MLP = []
     confidence_TN_MLP = []
     for userA in enroll.keys():
@@ -177,18 +188,17 @@ def cross_evaluate(enroll: dict, test: dict) -> (np.ndarray, np.ndarray):
     confidence_TP_MLP = np.squeeze(np.array(confidence_TP_MLP))
     confidence_TN_MLP = np.squeeze(np.array(confidence_TN_MLP))
 
-    # save these two array into file for future use
-
     return confidence_TP_MLP, confidence_TN_MLP
 
 
-def confidence_figure(confidence_TP_MLP: np.ndarray, confidence_TN_MLP: np.ndarray) -> None:
+def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
     """
     Draw two figures and save them into files for future use.
 
     :param confidence_TP_MLP: array with true positive attempts
     :param confidence_TN_MLP: array with true negative attempts
     """
+
     # Number of true negatives vs number of true positives
     plt.figure()
     n_TP, bins_TP, patches_TP = plt.hist(confidence_TP_MLP, alpha=0.5, bins=200)
@@ -211,11 +221,13 @@ def confidence_figure(confidence_TP_MLP: np.ndarray, confidence_TN_MLP: np.ndarr
     plt.show()
 
 
-def model_accuracy_figure(history) -> None:
+def model_accuracy_figure(history):
     """
     Draw two figures about the accuracy and loss of model during training
+
     :param history: historical data of model training
     """
+
     # Model accuracy
     plt.figure()
     plt.plot(history.history["accuracy"])
@@ -239,41 +251,42 @@ def model_accuracy_figure(history) -> None:
     plt.show()
 
 
-def save_model(model: Sequential, directory: str = "model") -> None:
+def save_model(model, directory="model"):
     """
     Save model to ./model folder
+
     :param model: keras model
     :param directory: string with directory name to store model in
     """
+
     model.save(directory)
 
 
 def save_central_vector(central_vector):
     """
     Save central vector for the future use
+
     :param central_vector: 1 x 41 matrix representing central vector
     """
+
     with open("model/central_vector.pickle", "wb") as file:
         pickle.dump(central_vector, file, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def main() -> None:
+def main():
     """
     Main function to create neural network model and train it with
     test data. Then the evaluation is performed and figures are drawn.
     Model and a central vector are saved to ./model folder.
     """
-    # Divide test data into eval and train
+
     eval_data, train_data = read_data()
-    # Prepare data for the model
     X, Y, X_train, X_valid, Y_train, Y_valid = prepare_data(eval_data)
-    # Create model and central vector
+
     model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid)
-    # Create test users' enroll templates and test samples
     enroll, test = enroll_users(model, eval_data, central_vector)
-    # Evaluate the model using cross evaluation (every user with everyone)
     conf_TP, conf_TN = cross_evaluate(enroll, test)
-    # Draw figures representing confidence and save data
+
     confidence_figure(conf_TP, conf_TN)
     model_accuracy_figure(history)
     save_model(model)
@@ -281,6 +294,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    # If the program is run directly (not just by importing function)
-    # run the main() function
     main()
