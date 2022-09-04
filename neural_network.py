@@ -8,7 +8,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
 
 BLOCK_SIZE = 7  # number of attributes - it will be the size of an input vector
-USERS = 120  # number of users - it will be the size of an output vector
+USERS = 100  # number of users - it will be the size of an output vector
 
 
 def load_model_from_dir(directory="./model"):
@@ -139,7 +139,7 @@ def enroll_users(model, eval_data, central_vector):
     for person_id in eval_data.keys():
 
         # Divide the dataset into enroll and test vectors
-        SEP = (len(eval_data[person_id]) * 2) // 3
+        SEP = (len(eval_data[person_id]) - 1)
 
         # ENROLLMENT VECTOR
         temp = eval_data[person_id][:SEP]
@@ -187,6 +187,11 @@ def cross_evaluate(enroll, test):
 
     confidence_TP_MLP = np.squeeze(np.array(confidence_TP_MLP))
     confidence_TN_MLP = np.squeeze(np.array(confidence_TN_MLP))
+
+    with open("./model/confidence_TP.pickle", 'wb') as file:
+        pickle.dump(confidence_TP_MLP, file)
+    with open("./model/confidence_TN.pickle", 'wb') as file:
+        pickle.dump(confidence_TN_MLP, file)
 
     return confidence_TP_MLP, confidence_TN_MLP
 

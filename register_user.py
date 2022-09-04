@@ -36,13 +36,14 @@ def register_template(model):
     while len(samples) < probes_number:
         print(f"({len(samples) + 1}): ", end="")
         sample = record()
+        print(sample)
         if len(sample) < BLOCK_SIZE + 1:
             print(f"\nPassword should has at least {BLOCK_SIZE + 1} characters!")
             continue
         samples.append(sample[:BLOCK_SIZE])
 
     template = create_template(model, samples)
-    return template
+    return template, samples
 
 
 def user_exists(username):
@@ -57,7 +58,7 @@ def user_exists(username):
                 return True
 
 
-def save_user(username, template):
+def save_user(username, template, samples):
     """
     Save user data to file.
     """
@@ -68,7 +69,7 @@ def save_user(username, template):
     else:
         users = {}
 
-    users[username] = {"template": template}
+    users[username] = {"template": template, "samples": samples}
 
     with open("users_data.pickle", "wb") as handle:
         pickle.dump(users, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -85,8 +86,8 @@ def main():
         print("User already exists!")
         username = input("username: ")
 
-    template = register_template(model)
-    save_user(username, template)
+    template, samples = register_template(model)
+    save_user(username, template, samples)
 
 
 if __name__ == "__main__":
