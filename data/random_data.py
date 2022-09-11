@@ -1,10 +1,8 @@
-import pandas
 import pandas as pd
 import pickle
+import random
 import numpy as np
 import matplotlib.pyplot as plt
-import statistics
-from sklearn.preprocessing import Normalizer
 
 users = {}
 hold = []
@@ -13,51 +11,25 @@ downdown = []
 
 # BAZA DANYCH Z 51 użytkownikami
 
-data51 = pd.read_csv("DSL-StrongPasswordData.csv")
-data51 = data51.drop(["sessionIndex", "rep", "subject"], axis=1)
-# data51.drop(data51.iloc[:, 1::3], axis=1, inplace=True)
-# data51.drop(data51.iloc[:, 0::2], axis=1, inplace=True)
-# scaler = Normalizer()
-# scaler.fit(data51.values)
-# new_data = scaler.transform(data51.values)
-# data51 = pandas.DataFrame(new_data)
-data51["combined"] = data51.values.tolist()
-data51.drop(data51.iloc[:, 0:-1:], axis=1, inplace=True)
 user_count = -1
-for index, row in data51.iterrows():
-    if index // 400 > user_count:
+for i in range(400 * 51):
+    if i // 400 > user_count:
         user_count += 1
         users[user_count] = []
-    keystrokes = row["combined"]
-    keystrokes = [int(x * 1000) for x in keystrokes]
+    keystrokes = [0] * 31
+    keystrokes[0:31:3] = [int(x) for x in np.random.normal(89, 40, 11)]
+    keystrokes[1:31:3] = [int(x) for x in np.random.normal(248, 100, 10)]
+    keystrokes[2:31:3] = [int(x) for x in np.random.normal(158, 100, 10)]
     users[user_count].append(keystrokes)
 
     hold.append(keystrokes[::3])
     downdown.append(keystrokes[1::3])
     between.append(keystrokes[2::3])
 
+
 hold = np.concatenate(np.array(hold), axis=None)
 downdown = np.concatenate(np.array(downdown), axis=None)
 between = np.concatenate(np.array(between), axis=None)
-
-print(f"HOLD\n"
-      f"\tMIN: {min(hold)}\n"
-      f"\tMAX: {max(hold)}\n"
-      f"\tMEAN: {statistics.mean(hold)}\n"
-      f"\tMEDIAN: {statistics.median(hold)}\n"
-      f"\tVARIANCE: {statistics.variance(hold)}")
-print(f"DOWN-DOWN\n"
-      f"\tMIN: {min(downdown)}\n"
-      f"\tMAX: {max(downdown)}\n"
-      f"\tMEAN: {statistics.mean(downdown)}\n"
-      f"\tMEDIAN: {statistics.median(downdown)}\n"
-      f"\tVARIANCE: {statistics.variance(downdown)}")
-print(f"BETWEEN\n"
-      f"\tMIN: {min(between)}\n"
-      f"\tMAX: {max(between)}\n"
-      f"\tMEAN: {statistics.mean(between)}\n"
-      f"\tMEDIAN: {statistics.median(between)}\n"
-      f"\tVARIANCE: {statistics.variance(between)}")
 
 plt.figure()
 plt.hist(hold, alpha=0.5, bins=125, range=(0, 250), color="orange")
@@ -75,6 +47,7 @@ plt.hist(between, alpha=0.5, bins=125, range=(0, 1000), color="orange")
 plt.xlabel("Between time")
 plt.savefig("./between_times.png")
 plt.show()
+
 
 # CREATE TRAIN AND EVAL DICTIONARIES
 # We will divide dataset into train (120 users) and eval (31 users)

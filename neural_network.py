@@ -1,11 +1,12 @@
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.layers import Dense
+from keras.layers import Dense, Input, Dropout, LSTM
 from keras.models import Sequential, load_model
 from keras.utils import to_categorical
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
+import operator
 
 BLOCK_SIZE = 31  # number of attributes - it will be the size of an input vector
 USERS = 41  # number of users - it will be the size of an output vector
@@ -100,9 +101,12 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
 
     # THIS PART NEEDS TO BE REVISED - HOW MANY NEURONS AND HOW MANY LAYERS
     model = Sequential()
+    # model.add(Input(shape=(BLOCK_SIZE, 1)))
     model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
-    model.add(Dense(units=27, activation="relu"))
-    model.add(Dense(units=56, activation="relu"))
+    model.add(Dense(units=64, activation="relu"))
+    model.add(Dense(units=45, activation="relu"))
+    model.add(Dense(units=64, activation="relu"))
+    model.add(Dropout(rate=0.5))
     model.add(Dense(units=USERS, activation="softmax"))
 
     model.compile(
@@ -136,7 +140,7 @@ def enroll_users(model, eval_data, central_vector):
     for person_id in eval_data.keys():
 
         # Divide the dataset into enroll and test vectors
-        SEP = (len(eval_data[person_id]) - 1)
+        SEP = len(eval_data[person_id]) - 2
 
         # ENROLLMENT VECTOR
         temp = eval_data[person_id][:SEP]
@@ -168,19 +172,23 @@ def cross_evaluate(enroll, test):
     confidence_TP_MLP = []
     confidence_TN_MLP = []
     for userA in enroll.keys():
-        userA_model = np.expand_dims(enroll[userA], axis=0)
+        userA_model = enroll[userA]
+        A = []
+        B = []
         # testing with the same user's test vectors
         for t in test[userA]:
-            temp = np.expand_dims(t, axis=0)
-            a = cosine_similarity(userA_model, temp)
+            a = check_score(userA_model, t)
             confidence_TP_MLP.append(a)
+            A.append(a)
+        # print("A:", A)
         # testing with other users' test vectors
         for userB in test.keys():
             if userB != userA:
                 for t in test[userB]:
-                    temp = np.expand_dims(t, axis=0)
-                    b = cosine_similarity(userA_model, temp)
+                    b = check_score(userA_model, t)
                     confidence_TN_MLP.append(b)
+                    B.append(b)
+        # print("B:", B)
 
     confidence_TP_MLP = np.squeeze(np.array(confidence_TP_MLP))
     confidence_TN_MLP = np.squeeze(np.array(confidence_TN_MLP))

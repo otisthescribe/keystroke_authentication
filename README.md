@@ -6,11 +6,14 @@ We use python [keyboard](https://pypi.org/project/keyboard/) library to record k
 [keras](https://keras.io/) to create and train neural network model.
 
 Training and evaluation data is stored in separate pickle files in data folder.
-Two datasets were used to prepare training and evaluation data:
-1. [Keystroke100 Dataset](http://personal.ie.cuhk.edu.hk/~ccloy/downloads_keystroke100.html)
-2. [DSL-StrongPasswordData](http://www.cs.cmu.edu/~keystroke/)
+This dataset was used to prepare training and evaluation data:
+1. [DSL-StrongPasswordData](http://www.cs.cmu.edu/~keystroke/)
 
-Both original datasets are in the data folder.
+Statistics of data parameters:
+
+<img src="./data/hold_times.png"  width=30% height=30% alt="Hold time">
+<img src="./data/down_down_times.png"  width=30% height=30% alt="Down down time">
+<img src="./data/between_times.png"  width=30% height=30% alt="Between timee">
 
 Authors: 
 - Grzegorz Kmita (gkmita@student.agh.edu.pl)
@@ -19,7 +22,7 @@ Authors:
 ## Install required packages
 
 To run scripts, you need to have several packages that are not installed by default.
-Install all of them at one by running this command:
+Install all of them at once by running this command:
 
 ```
 pip3 install -r requirements.txt
@@ -44,10 +47,12 @@ Model training will look like that:
 There will be 4 plots produced. Two of them are related to model training and 
 two of them are related to the evaluation data. Below you can see examples of these plots:
 
-![True positive and true negative confidence](/plots/confidence_TP_TN.png)
-![Threshold and probability](/plots/threshold_probability.png)
-![Model accuracy](/plots/model_accuracy.png)
-![Model loss](/plots/model_loss.png)
+<img src="./plots/confidence_TP_TN.png"  width=40% height=40%>
+<img src="./plots/threshold_probability.png"  width=40% height=40%>
+
+
+<img src="./plots/model_accuracy.png"  width=40% height=40%>
+<img src="./plots/model_loss.png"  width=40% height=40%>
 
 ## Registering user
 

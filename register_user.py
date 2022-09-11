@@ -2,7 +2,7 @@ import os.path
 import numpy as np
 import pickle
 from neural_network import load_model_from_dir, BLOCK_SIZE
-from keystrokes_recorder import record
+from keystrokes_recorder2 import record
 
 
 def create_template(model, samples, central_vector):
@@ -19,7 +19,7 @@ def create_template(model, samples, central_vector):
     temp = np.array(samples)
     output = model.predict(temp)
     template = np.mean(output, axis=0)
-    template = np.subtract(template, central_vector)
+    # template = np.subtract(template, central_vector)
     return template
 
 
@@ -41,7 +41,7 @@ def register_template(model, central_vector):
         sample = record()
         print(sample)
         if len(sample) < BLOCK_SIZE:
-            print(f"\nPassword should has at least {BLOCK_SIZE//2 + 1} characters!")
+            print(f"\nPassword should has at least {BLOCK_SIZE//3 + 1} characters!")
             continue
         samples.append(sample[:BLOCK_SIZE])
 
