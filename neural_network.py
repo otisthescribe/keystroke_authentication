@@ -7,8 +7,8 @@ from keras.utils import to_categorical
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
 
-BLOCK_SIZE = 7  # number of attributes - it will be the size of an input vector
-USERS = 100  # number of users - it will be the size of an output vector
+BLOCK_SIZE = 31  # number of attributes - it will be the size of an input vector
+USERS = 41  # number of users - it will be the size of an output vector
 
 
 def load_model_from_dir(directory="./model"):
@@ -81,7 +81,7 @@ def prepare_data(train_data):
 
     Y_oneshot = to_categorical(Y, num_classes=USERS)
     X_train, X_valid, Y_train, Y_valid = train_test_split(
-        X, Y_oneshot, test_size=0.3, random_state=123
+        X, Y_oneshot, test_size=0.5, random_state=123
     )
     return X, Y, X_train, X_valid, Y_train, Y_valid
 
@@ -101,11 +101,8 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     # THIS PART NEEDS TO BE REVISED - HOW MANY NEURONS AND HOW MANY LAYERS
     model = Sequential()
     model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
-    model.add(Dense(units=8, activation="relu"))
-    model.add(Dense(units=16, activation="relu"))
-    model.add(Dense(units=32, activation="relu"))
-    model.add(Dense(units=64, activation="relu"))
-    model.add(Dense(units=96, activation="relu"))
+    model.add(Dense(units=27, activation="relu"))
+    model.add(Dense(units=56, activation="relu"))
     model.add(Dense(units=USERS, activation="softmax"))
 
     model.compile(
@@ -151,8 +148,8 @@ def enroll_users(model, eval_data, central_vector):
         test_vectors = []
         temp = eval_data[person_id][SEP:]
         output = model.predict(np.array(temp))
-        out_vector = np.mean(output, axis=0)
-        test_vectors.append(np.subtract(out_vector, central_vector))
+        for t in output:
+            test_vectors.append(np.subtract(t, central_vector))
         test[person_id] = np.array(test_vectors)
 
     return enroll, test

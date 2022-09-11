@@ -1,4 +1,5 @@
-import keyboard
+from pynput import keyboard
+import time
 
 
 def count_values(keydown, keyup):
@@ -34,31 +35,37 @@ def count_values(keydown, keyup):
 
 
 def record():
-    """
-    Record the keystrokes unless the ENTER is pressed.
-    Add values of keys being pressed and released in a hooked function.
-    :return: Keystrokes array
-    """
-
     keydown = []
     keyup = []
 
-    def key_recording(key):
-        nonlocal keyup, keydown
-        if key.name != 'enter':
-            if key.event_type == keyboard.KEY_DOWN:
-                keydown.append(key.time)
-            else:
-                keyup.append(key.time)
+    def on_press(key):
+        nonlocal keydown
+        keydown.append(time.time())
 
-    keyboard.hook(key_recording)
-    keyboard.wait("enter")
-    keyboard.unhook(key_recording)
+    def on_release(key):
+        nonlocal keyup
+        if key == keyboard.Key.enter:
+            return False
+        else:
+            keyup.append(time.time())
+
+    with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+        listener.join()
     return count_values(keydown, keyup)
 
 
 if __name__ == "__main__":
-    while True:
-        print("Try it out: ", end="")
-        keys = record()
-        print(keys)
+    probes_number = 10
+    print(f"Sumbit your password {probes_number} times:")
+    samples = []
+    while len(samples) < probes_number:
+        print(f"({len(samples) + 1}): ", end="")
+        sample = record()
+        print(sample)
+        samples.append(sample)
+
+    # count = 0
+    # while True:
+    #     print("Try it out: ", end="")
+    #     keystrokes = record()
+    #     print(keystrokes)

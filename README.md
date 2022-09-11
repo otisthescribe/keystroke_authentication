@@ -2,7 +2,7 @@
 
 This project focuses on implementing keystroke dynamics biometrics as part of the authentication process.
 
-We are using python [keyboard](https://pypi.org/project/keyboard/) library to record keystrokes and 
+We use python [keyboard](https://pypi.org/project/keyboard/) library to record keystrokes and 
 [keras](https://keras.io/) to create and train neural network model.
 
 Training and evaluation data is stored in separate pickle files in data folder.

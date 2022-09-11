@@ -5,11 +5,12 @@ from neural_network import load_model_from_dir, BLOCK_SIZE
 from keystrokes_recorder import record
 
 
-def create_template(model, samples):
+def create_template(model, samples, central_vector):
     """
     Given the user's data (input) calculate the template.
     Use the model to get a vector and central vector to normalize the output.
 
+    :param central_vector:
     :param model: keras model
     :param samples: array of user's input
     :return: template vector
@@ -18,14 +19,16 @@ def create_template(model, samples):
     temp = np.array(samples)
     output = model.predict(temp)
     template = np.mean(output, axis=0)
+    template = np.subtract(template, central_vector)
     return template
 
 
-def register_template(model):
+def register_template(model, central_vector):
     """
     Read user's input [probes_number] times and
     create a biometric template out of it.
 
+    :param central_vector:
     :param model: keras model
     :return: biometric template
     """
@@ -37,12 +40,12 @@ def register_template(model):
         print(f"({len(samples) + 1}): ", end="")
         sample = record()
         print(sample)
-        if len(sample) < BLOCK_SIZE + 1:
-            print(f"\nPassword should has at least {BLOCK_SIZE + 1} characters!")
+        if len(sample) < BLOCK_SIZE:
+            print(f"\nPassword should has at least {BLOCK_SIZE//2 + 1} characters!")
             continue
         samples.append(sample[:BLOCK_SIZE])
 
-    template = create_template(model, samples)
+    template = create_template(model, samples, central_vector)
     return template, samples
 
 
@@ -86,7 +89,7 @@ def main():
         print("User already exists!")
         username = input("username: ")
 
-    template, samples = register_template(model)
+    template, samples = register_template(model, central_vector)
     save_user(username, template, samples)
 
 
