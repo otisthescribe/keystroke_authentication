@@ -6,10 +6,9 @@ from keras.models import Sequential, load_model
 from keras.utils import to_categorical
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
-import operator
+from data.data_preprocessing import USERS
 
 BLOCK_SIZE = 31  # number of attributes - it will be the size of an input vector
-USERS = 41  # number of users - it will be the size of an output vector
 
 
 def load_model_from_dir(directory="./model"):
@@ -82,7 +81,7 @@ def prepare_data(train_data):
 
     Y_oneshot = to_categorical(Y, num_classes=USERS)
     X_train, X_valid, Y_train, Y_valid = train_test_split(
-        X, Y_oneshot, test_size=0.5, random_state=123
+        X, Y_oneshot, test_size=0.2, random_state=123
     )
     return X, Y, X_train, X_valid, Y_train, Y_valid
 
@@ -103,10 +102,10 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     model = Sequential()
     # model.add(Input(shape=(BLOCK_SIZE, 1)))
     model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
-    model.add(Dense(units=64, activation="relu"))
-    model.add(Dense(units=45, activation="relu"))
-    model.add(Dense(units=64, activation="relu"))
-    model.add(Dropout(rate=0.5))
+    model.add(Dense(units=30, activation="relu"))
+    # model.add(Dense(units=45, activation="relu"))
+    # model.add(Dense(units=64, activation="relu"))
+    # model.add(Dropout(rate=0.5))
     model.add(Dense(units=USERS, activation="softmax"))
 
     model.compile(

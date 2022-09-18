@@ -4,92 +4,168 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import statistics
-from sklearn.preprocessing import Normalizer
+from sklearn.preprocessing import StandardScaler
 
-users = {}
-hold = []
-between = []
-downdown = []
+USERS = 30  # number of users - it will be the size of an output vector
 
-# BAZA DANYCH Z 51 użytkownikami
 
-data51 = pd.read_csv("DSL-StrongPasswordData.csv")
-data51 = data51.drop(["sessionIndex", "rep", "subject"], axis=1)
-# data51.drop(data51.iloc[:, 1::3], axis=1, inplace=True)
-# data51.drop(data51.iloc[:, 0::2], axis=1, inplace=True)
-# scaler = Normalizer()
-# scaler.fit(data51.values)
-# new_data = scaler.transform(data51.values)
-# data51 = pandas.DataFrame(new_data)
-data51["combined"] = data51.values.tolist()
-data51.drop(data51.iloc[:, 0:-1:], axis=1, inplace=True)
-user_count = -1
-for index, row in data51.iterrows():
-    if index // 400 > user_count:
-        user_count += 1
-        users[user_count] = []
-    keystrokes = row["combined"]
-    keystrokes = [int(x * 1000) for x in keystrokes]
-    users[user_count].append(keystrokes)
+def read_data(filename="DSL-StrongPasswordData.csv"):
+    data51 = pd.read_csv("DSL-StrongPasswordData.csv")
+    data51 = data51.drop(["sessionIndex", "rep"], axis=1)
 
-    hold.append(keystrokes[::3])
-    downdown.append(keystrokes[1::3])
-    between.append(keystrokes[2::3])
+    train_dataset = data51.iloc[:USERS * 400, :].copy(deep=True)
+    train_dataset.reset_index(inplace=True, drop=True)
+    eval_dataset = data51.iloc[USERS * 400:, :].copy(deep=True)
+    eval_dataset.reset_index(inplace=True, drop=True)
 
-hold = np.concatenate(np.array(hold), axis=None)
-downdown = np.concatenate(np.array(downdown), axis=None)
-between = np.concatenate(np.array(between), axis=None)
+    del data51
 
-print(f"HOLD\n"
-      f"\tMIN: {min(hold)}\n"
-      f"\tMAX: {max(hold)}\n"
-      f"\tMEAN: {statistics.mean(hold)}\n"
-      f"\tMEDIAN: {statistics.median(hold)}\n"
-      f"\tVARIANCE: {statistics.variance(hold)}")
-print(f"DOWN-DOWN\n"
-      f"\tMIN: {min(downdown)}\n"
-      f"\tMAX: {max(downdown)}\n"
-      f"\tMEAN: {statistics.mean(downdown)}\n"
-      f"\tMEDIAN: {statistics.median(downdown)}\n"
-      f"\tVARIANCE: {statistics.variance(downdown)}")
-print(f"BETWEEN\n"
-      f"\tMIN: {min(between)}\n"
-      f"\tMAX: {max(between)}\n"
-      f"\tMEAN: {statistics.mean(between)}\n"
-      f"\tMEDIAN: {statistics.median(between)}\n"
-      f"\tVARIANCE: {statistics.variance(between)}")
+    return train_dataset, eval_dataset
 
-plt.figure()
-plt.hist(hold, alpha=0.5, bins=125, range=(0, 250), color="orange")
-plt.xlabel("Hold time")
-plt.savefig("./hold_times.png")
-plt.show()
 
-plt.figure()
-plt.hist(downdown, alpha=0.5, bins=125, range=(0, 1000), color="orange")
-plt.xlabel("Down down time")
-plt.savefig("./down_down_times.png")
-plt.show()
+def data_augmentation(train_dataset):
+    H = train_dataset.iloc[:, 1::3]
+    DD = train_dataset.iloc[:, 2::3]
+    B = train_dataset.iloc[:, 3::3]
 
-plt.hist(between, alpha=0.5, bins=125, range=(0, 1000), color="orange")
-plt.xlabel("Between time")
-plt.savefig("./between_times.png")
-plt.show()
+    HA = np.sort(np.concatenate(H.to_numpy(), axis=None))
+    DDA = np.sort(np.concatenate(DD.to_numpy(), axis=None))
+    BA = np.sort(np.concatenate(B.to_numpy(), axis=None))
 
-# CREATE TRAIN AND EVAL DICTIONARIES
-# We will divide dataset into train (120 users) and eval (31 users)
+    # Get rid of outlines
 
-eval_data = {}
-eval_count = 0
+    max_hold = HA[int(len(HA) * 0.99)]
+    max_downdown = DDA[int(len(DDA) * 0.99)]
+    max_between = BA[int(len(BA) * 0.99)]
 
-for i in range(41, 51):
-    eval_data[eval_count] = users.pop(i)
-    eval_count += 1
+    # Go through the DataFrame and drop those rows that have some values greater that max
 
-# SAVE THE DATA
+    for index, row in train_dataset.iterrows():
 
-with open("train_user_data.pickle", "wb") as file:
-    pickle.dump(users, file)
+        if max(row[1::3]) > max_hold:
+            train_dataset.drop(index, inplace=True)
 
-with open("eval_user_data.pickle", "wb") as file:
-    pickle.dump(eval_data, file)
+        elif max(row[2::3]) > max_downdown:
+            train_dataset.drop(index, inplace=True)
+
+        elif max(row[3::3]) > max_between:
+            train_dataset.drop(index, inplace=True)
+
+    train_dataset.reset_index(inplace=True, drop=True)
+
+    hold_scaler = StandardScaler()
+    hold_scaler.fit(train_dataset.iloc[:, 1::3].values.tolist())
+    downdown_scaler = StandardScaler()
+    downdown_scaler.fit(train_dataset.iloc[:, 2::3].values.tolist())
+    between_scaler = StandardScaler()
+    between_scaler.fit(train_dataset.iloc[:, 3::3].values.tolist())
+
+    new_data = hold_scaler.transform(train_dataset.iloc[:, 1::3].values.tolist())
+    train_dataset.iloc[:, 1::3] = pandas.DataFrame(new_data)
+    new_data = downdown_scaler.transform(train_dataset.iloc[:, 2::3].values.tolist())
+    train_dataset.iloc[:, 2::3] = pandas.DataFrame(new_data)
+    new_data = between_scaler.transform(train_dataset.iloc[:, 3::3].values.tolist())
+    train_dataset.iloc[:, 3::3] = pandas.DataFrame(new_data)
+
+
+def get_train_dict(train_dataset):
+    users = {}
+    hold, between, downdown = [], [], []
+    train_dataset['combined'] = train_dataset.iloc[:, 1:].values.tolist()
+
+    user_count = -1
+    subject = "0"
+    for index, row in train_dataset.iterrows():
+        if row["subject"] != subject:
+            subject = row["subject"]
+            user_count += 1
+            users[user_count] = []
+        keystrokes = row["combined"]
+        keystrokes = [int(x * 1000) for x in keystrokes]
+        users[user_count].append(keystrokes)
+
+        hold.append(keystrokes[::3])
+        downdown.append(keystrokes[1::3])
+        between.append(keystrokes[2::3])
+
+    hold = np.concatenate(np.array(hold), axis=None)
+    downdown = np.concatenate(np.array(downdown), axis=None)
+    between = np.concatenate(np.array(between), axis=None)
+
+    generate_figures(hold, between, downdown)
+    get_statistics(hold, between, downdown)
+
+    return users
+
+
+def get_eval_dict(eval_dataset):
+    eval_data = {}
+    eval_dataset['combined'] = eval_dataset.iloc[:, 1:].values.tolist()
+
+    user_count = -1
+    subject = "0"
+    for index, row in eval_dataset.iterrows():
+        if row["subject"] != subject:
+            subject = row["subject"]
+            user_count += 1
+            eval_data[user_count] = []
+        keystrokes = row["combined"]
+        keystrokes = [int(x * 1000) for x in keystrokes]
+        eval_data[user_count].append(keystrokes)
+
+    return eval_data
+
+
+def generate_figures(hold, between, downdown):
+    plt.figure()
+    plt.hist(hold, alpha=0.7, bins=50, color="orange")
+    plt.xlabel("Hold time")
+    plt.savefig("./hold_times.png")
+    plt.show()
+
+    plt.figure()
+    plt.hist(downdown, alpha=0.7, bins=50, color="green")
+    plt.xlabel("Down down time")
+    plt.savefig("./down_down_times.png")
+    plt.show()
+
+    plt.hist(between, alpha=0.7, bins=50, color="blue")
+    plt.xlabel("Between time")
+    plt.savefig("./between_times.png")
+    plt.show()
+
+
+def get_statistics(hold, between, downdown):
+    d = {
+        "MIN": [min(hold), min(between), min(downdown)],
+        "MAX": [max(hold), max(between), max(downdown)],
+        "MEAN": [statistics.mean(hold), statistics.mean(between), statistics.mean(downdown)],
+        "MEDIAN": [statistics.median(hold), statistics.median(between), statistics.median(downdown)],
+        "VARIANCE": [statistics.variance(hold), statistics.variance(between), statistics.variance(downdown)],
+    }
+
+    stat = pd.DataFrame(data=d, index=['HOLD', 'BETWEEN', 'DOWNDOWN'])
+    print(stat)
+    return stat
+
+
+def save_data(users, eval_data):
+
+    with open("train_user_data.pickle", "wb") as file:
+        pickle.dump(users, file)
+
+    with open("eval_user_data.pickle", "wb") as file:
+        pickle.dump(eval_data, file)
+
+
+def main():
+    train_dataset, eval_dataset = read_data()
+    data_augmentation(train_dataset)
+    users = get_train_dict(train_dataset)
+    eval_data = get_eval_dict(eval_dataset)
+    save_data(users, eval_data)
+
+
+if __name__ == "__main__":
+    main()
+
