@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import statistics
 from sklearn.preprocessing import StandardScaler
 
-USERS = 30  # number of users - it will be the size of an output vector
+USERS = 41  # number of users - it will be the size of an output vector
 
 
 def read_data(filename="DSL-StrongPasswordData.csv"):

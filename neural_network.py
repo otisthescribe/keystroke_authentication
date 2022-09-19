@@ -103,9 +103,6 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     # model.add(Input(shape=(BLOCK_SIZE, 1)))
     model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
     model.add(Dense(units=30, activation="relu"))
-    # model.add(Dense(units=45, activation="relu"))
-    # model.add(Dense(units=64, activation="relu"))
-    # model.add(Dropout(rate=0.5))
     model.add(Dense(units=USERS, activation="softmax"))
 
     model.compile(

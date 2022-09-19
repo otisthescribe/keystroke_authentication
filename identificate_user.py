@@ -2,7 +2,6 @@ import pickle
 import numpy as np
 from keystrokes_recorder2 import record
 from neural_network import check_score
-from register_user import user_exists
 from neural_network import load_model_from_dir, BLOCK_SIZE
 
 
@@ -23,19 +22,17 @@ def create_sample(model, data, central_vector):
     return sample
 
 
-def authenticate_user(model, username, central_vector):
+def identificate_user(users, model, central_vector):
     """
     Get registered user's data (based on the login provided as input)
     and then get the second input with the rewritten sentence.
     Calculate the score and return the result.
+    :param users: dictionary with users and their templates
     :param central_vector:
     :param model: keras model
-    :param username: username provided as an input
     :return: biometric score (float)
     """
 
-    user = get_user_data(username)
-    template = user["template"]
     print("Sumbit your password:")
     print(f"--> ", end="")
     sample = record()
@@ -44,19 +41,25 @@ def authenticate_user(model, username, central_vector):
         print(f"--> ", end="")
         sample = record()
     probe = create_sample(model, sample[:BLOCK_SIZE], central_vector)
-    return check_score(template, probe)
+
+    results = {}
+    for user in users:
+        template = users[user]["template"]
+        results[user] = check_score(template, probe)
+
+    max_key = max(results, key=results.get)
+    return max_key, results
 
 
-def get_user_data(username):
+def get_users_data():
     """
     Read user's data from file based on the username.
-    :param username: user in a users file (string)
     :return: array with user's data
     """
 
     with open("user_data/users_data.pickle", "rb") as handle:
         users = pickle.load(handle)
-    return users[f"{username}"]
+    return users
 
 
 def main():
@@ -65,14 +68,12 @@ def main():
     """
 
     model, central_vector = load_model_from_dir()
-    username = input("username: ")
-    if not user_exists(username):
-        print("User does not exist. Register users before trying to authenticate them.")
-        exit(0)
+    users = get_users_data()
 
     while True:
-        score = authenticate_user(model, username, central_vector)
-        print(f"SCORE: {score}")
+        user, results = identificate_user(users, model, central_vector)
+        print(f"\nUSER: {user}\n")
+        print(results)
 
 
 if __name__ == "__main__":

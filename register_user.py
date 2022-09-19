@@ -19,7 +19,7 @@ def create_template(model, samples, central_vector):
     temp = np.array(samples)
     output = model.predict(temp)
     template = np.mean(output, axis=0)
-    # template = np.subtract(template, central_vector)
+    template = np.subtract(template, central_vector)
     return template
 
 
@@ -54,8 +54,8 @@ def user_exists(username):
     Check if username already exists (cannot register again)
     """
 
-    if os.path.exists("users_data.pickle"):
-        with open("users_data.pickle", "rb") as handle:
+    if os.path.exists("user_data/users_data.pickle"):
+        with open("user_data/users_data.pickle", "rb") as handle:
             users = pickle.load(handle)
             if username in users.keys():
                 return True
@@ -66,15 +66,15 @@ def save_user(username, template, samples):
     Save user data to file.
     """
 
-    if os.path.exists("users_data.pickle"):
-        with open("users_data.pickle", "rb") as handle:
+    if os.path.exists("user_data/users_data.pickle"):
+        with open("user_data/users_data.pickle", "rb") as handle:
             users = pickle.load(handle)
     else:
         users = {}
 
     users[username] = {"template": template, "samples": samples}
 
-    with open("users_data.pickle", "wb") as handle:
+    with open("user_data/users_data.pickle", "wb") as handle:
         pickle.dump(users, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
