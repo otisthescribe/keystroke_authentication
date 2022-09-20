@@ -5,13 +5,34 @@ import numpy as np
 import matplotlib.pyplot as plt
 import statistics
 from sklearn.preprocessing import StandardScaler
+import random
 
 USERS = 41  # number of users - it will be the size of an output vector
+
+
+def shuffle_dataste(data):
+    rounds = 100
+    TOTAL_USERS = 51
+
+    for i in range(rounds):
+        index1 = random.randint(0, 50)
+        index2 = random.randint(0, 50)
+        # SHUFFLE THE BLOCKS
+        data.iloc[index1 * 400:(index1 + 1) * 400, :].sample(frac=1)
+        data.iloc[index2 * 400:(index2 + 1) * 400, :].sample(frac=1)
+        # SWAP BLOCKS WITH index1 AND index2
+        temp = data.iloc[index1 * 400:(index1 + 1) * 400, :].copy(deep=True)
+        data.iloc[index1 * 400:(index1 + 1) * 400, :] = data.iloc[index2 * 400:(index2 + 1) * 400, :]
+        data.iloc[index2 * 400:(index2 + 1) * 400, :] = temp
+
+    return data
 
 
 def read_data(filename="DSL-StrongPasswordData.csv"):
     data51 = pd.read_csv("DSL-StrongPasswordData.csv")
     data51 = data51.drop(["sessionIndex", "rep"], axis=1)
+
+    data51 = shuffle_dataste(data51)
 
     train_dataset = data51.iloc[:USERS * 400, :].copy(deep=True)
     train_dataset.reset_index(inplace=True, drop=True)
