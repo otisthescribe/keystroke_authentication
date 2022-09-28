@@ -41,7 +41,7 @@ def register_template(model, central_vector):
         sample = record()
         print(sample)
         if len(sample) < BLOCK_SIZE:
-            print(f"\nPassword should has at least {BLOCK_SIZE//3 + 1} characters!")
+            print(f"Password should has at least {BLOCK_SIZE//3 + 1} characters!")
             continue
         samples.append(sample[:BLOCK_SIZE])
 

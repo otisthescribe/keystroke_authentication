@@ -4,15 +4,25 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import statistics
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, normalize
 import random
 
 USERS = 41  # number of users - it will be the size of an output vector
 
 
 def shuffle_dataste(data):
+    """
+    It is recommended to shuffle the data before splitting the dataset
+    into training and evaluation sets. We cannot do this using
+    some external function because our data is divided into blocks of records.
+    Firstly we choose two random users (blocks of 400 records) and shuffle the records
+    inside them.
+    Then we swap the users.
+    :param data: original dataset before preprocessing
+    :return: shuffled dataset
+    """
+
     rounds = 100
-    TOTAL_USERS = 51
 
     for i in range(rounds):
         index1 = random.randint(0, 50)
@@ -29,9 +39,18 @@ def shuffle_dataste(data):
 
 
 def read_data(filename="DSL-StrongPasswordData.csv"):
+    """
+    Read data from the file, split the dataset into two and
+    return training and evaluation sets.
+    Remove the sessionIndex and rep columns.
+    :param filename: string with filename
+    :return: training and evaluation datasets
+    """
+
     data51 = pd.read_csv("DSL-StrongPasswordData.csv")
     data51 = data51.drop(["sessionIndex", "rep"], axis=1)
 
+    # Shuffle the data before splitting
     data51 = shuffle_dataste(data51)
 
     train_dataset = data51.iloc[:USERS * 400, :].copy(deep=True)
@@ -45,6 +64,14 @@ def read_data(filename="DSL-StrongPasswordData.csv"):
 
 
 def data_augmentation(train_dataset):
+    """
+    Remove the records containg outlines.
+    Standardize data using StandardScaler to make
+    a mean and variance exual 0.
+    Perform it only on the training data.
+    :param train_dataset: training DataFrame
+    :return: None
+    """
     H = train_dataset.iloc[:, 1::3]
     DD = train_dataset.iloc[:, 2::3]
     B = train_dataset.iloc[:, 3::3]
@@ -74,6 +101,11 @@ def data_augmentation(train_dataset):
 
     train_dataset.reset_index(inplace=True, drop=True)
 
+    # scaler = StandardScaler()
+    # scaler.fit(train_dataset.iloc[:, 1::].values.tolist())
+    # new_data = scaler.transform(train_dataset.iloc[:, 1::].values.tolist())
+    # train_dataset.iloc[:, 1::] = pandas.DataFrame(new_data)
+
     hold_scaler = StandardScaler()
     hold_scaler.fit(train_dataset.iloc[:, 1::3].values.tolist())
     downdown_scaler = StandardScaler()
@@ -90,6 +122,14 @@ def data_augmentation(train_dataset):
 
 
 def get_train_dict(train_dataset):
+    """
+    Create a dictionary out of training dataset.
+    Based on subject column divide records into users and
+    add to dictionary.
+    Generate figures and statistics.
+    :param train_dataset: training DataFrame
+    :return: users dataset
+    """
     users = {}
     hold, between, downdown = [], [], []
     train_dataset['combined'] = train_dataset.iloc[:, 1:].values.tolist()
@@ -120,6 +160,14 @@ def get_train_dict(train_dataset):
 
 
 def get_eval_dict(eval_dataset):
+    """
+    Create a dictionary out of evaluation dataset.
+    Based on subject column divide records into users and
+    add to dictionary.
+    Generate figures and statistics.
+    :param eval_dataset: training DataFrame
+    :return: eval dataset
+    """
     eval_data = {}
     eval_dataset['combined'] = eval_dataset.iloc[:, 1:].values.tolist()
 
@@ -157,6 +205,13 @@ def generate_figures(hold, between, downdown):
 
 
 def get_statistics(hold, between, downdown):
+    """
+    Create pandas DataFrme with statistics of three  parameters.
+    :param hold: array with hold times
+    :param between: array with between times
+    :param downdown: array with downdowntimes
+    :return: pandas DataFrame
+    """
     d = {
         "MIN": [min(hold), min(between), min(downdown)],
         "MAX": [max(hold), max(between), max(downdown)],

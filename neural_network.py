@@ -26,6 +26,22 @@ def load_model_from_dir(directory="./model"):
     return model, central_vector
 
 
+def read_data():
+    """
+    Read data from two pickle files with training and evaluation data.
+
+    :return: train_data and eval_data dictionaries
+    """
+
+    with open("./data/train_user_data.pickle", "rb") as file:
+        train_data = pickle.load(file)
+
+    with open("./data/eval_user_data.pickle", "rb") as file:
+        eval_data = pickle.load(file)
+
+    return train_data, eval_data
+
+
 def check_score(sample, template):
     """
     Checking the cosine similarity (which is a biometric score) between
@@ -42,22 +58,6 @@ def check_score(sample, template):
     score = cosine_similarity(a, b)
     # score is formatted as [[float]] so return just the value
     return score[0][0]
-
-
-def read_data():
-    """
-    Read data from two pickle files with training and evaluation data.
-
-    :return: train_data and eval_data dictionaries
-    """
-
-    with open("./data/train_user_data.pickle", "rb") as file:
-        train_data = pickle.load(file)
-
-    with open("./data/eval_user_data.pickle", "rb") as file:
-        eval_data = pickle.load(file)
-
-    return train_data, eval_data
 
 
 def prepare_data(train_data):
@@ -102,7 +102,7 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     model = Sequential()
     # model.add(Input(shape=(BLOCK_SIZE, 1)))
     model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
-    model.add(Dense(units=30, activation="relu"))
+    model.add(Dense(units=34, activation="relu"))
     model.add(Dense(units=USERS, activation="softmax"))
 
     model.compile(
@@ -112,7 +112,7 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
 
     # batch size indicates the number of observations to calculate before updating the weights
     history = model.fit(
-        X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=16
+        X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=64
     )
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
@@ -207,8 +207,8 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
 
     # Number of true negatives vs number of true positives
     plt.figure()
-    n_TP, bins_TP, patches_TP = plt.hist(confidence_TP_MLP, alpha=0.5, bins=200)
-    n_TN, bins_TN, patches_TN = plt.hist(confidence_TN_MLP, alpha=0.5, bins=200)
+    n_TP, bins_TP, patches_TP = plt.hist(confidence_TP_MLP, alpha=0.5, bins=400)
+    n_TN, bins_TN, patches_TN = plt.hist(confidence_TN_MLP, alpha=0.5, bins=400)
     plt.legend(["score True Positive", "score True Negative"])
     plt.xlim([-1, 1])
     plt.xlabel("score")

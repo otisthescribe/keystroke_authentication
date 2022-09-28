@@ -3,6 +3,9 @@ import numpy as np
 import pandas as pd
 from data.data_preprocessing import generate_figures, get_statistics
 
+# Read users_data.pickle
+# Create statistics and dataframe from user's templates
+
 hold = []
 between = []
 downdown = []

@@ -40,7 +40,7 @@ def authenticate_user(model, username, central_vector):
     print(f"--> ", end="")
     sample = record()
     while len(sample) < BLOCK_SIZE:
-        print(f"\nPassword should has at least {BLOCK_SIZE//2 + 1} characters!")
+        print(f"Password should has at least {BLOCK_SIZE//2 + 1} characters!")
         print(f"--> ", end="")
         sample = record()
     probe = create_sample(model, sample[:BLOCK_SIZE], central_vector)
