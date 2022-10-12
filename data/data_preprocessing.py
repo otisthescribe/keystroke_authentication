@@ -10,7 +10,7 @@ import random
 USERS = 41  # number of users - it will be the size of an output vector
 
 
-def shuffle_dataste(data):
+def shuffle_datastet(data):
     """
     It is recommended to shuffle the data before splitting the dataset
     into training and evaluation sets. We cannot do this using
@@ -51,7 +51,7 @@ def read_data(filename="DSL-StrongPasswordData.csv"):
     data51 = data51.drop(["sessionIndex", "rep"], axis=1)
 
     # Shuffle the data before splitting
-    data51 = shuffle_dataste(data51)
+    data51 = shuffle_datastet(data51)
 
     train_dataset = data51.iloc[:USERS * 400, :].copy(deep=True)
     train_dataset.reset_index(inplace=True, drop=True)
@@ -153,7 +153,7 @@ def get_train_dict(train_dataset):
     downdown = np.concatenate(np.array(downdown), axis=None)
     between = np.concatenate(np.array(between), axis=None)
 
-    generate_figures(hold, between, downdown)
+    generate_figures(hold, between, downdown, "eval")
     get_statistics(hold, between, downdown)
 
     return users
@@ -169,6 +169,7 @@ def get_eval_dict(eval_dataset):
     :return: eval dataset
     """
     eval_data = {}
+    hold, between, downdown = [], [], []
     eval_dataset['combined'] = eval_dataset.iloc[:, 1:].values.tolist()
 
     user_count = -1
@@ -178,29 +179,41 @@ def get_eval_dict(eval_dataset):
             subject = row["subject"]
             user_count += 1
             eval_data[user_count] = []
+
         keystrokes = row["combined"]
         keystrokes = [int(x * 1000) for x in keystrokes]
         eval_data[user_count].append(keystrokes)
 
+        hold.append(keystrokes[::3])
+        downdown.append(keystrokes[1::3])
+        between.append(keystrokes[2::3])
+
+    hold = np.concatenate(np.array(hold), axis=None)
+    downdown = np.concatenate(np.array(downdown), axis=None)
+    between = np.concatenate(np.array(between), axis=None)
+
+    generate_figures(hold, between, downdown, "eval")
+    get_statistics(hold, between, downdown)
+
     return eval_data
 
 
-def generate_figures(hold, between, downdown):
+def generate_figures(hold, between, downdown, temp):
     plt.figure()
     plt.hist(hold, alpha=0.7, bins=50, color="orange")
     plt.xlabel("Hold time")
-    plt.savefig("./hold_times.png")
+    plt.savefig("./hold_times"+temp+".png")
     plt.show()
 
     plt.figure()
     plt.hist(downdown, alpha=0.7, bins=50, color="green")
     plt.xlabel("Down down time")
-    plt.savefig("./down_down_times.png")
+    plt.savefig("./down_down_times"+temp+".png")
     plt.show()
 
     plt.hist(between, alpha=0.7, bins=50, color="blue")
     plt.xlabel("Between time")
-    plt.savefig("./between_times.png")
+    plt.savefig("./between_times"+temp+".png")
     plt.show()
 
 

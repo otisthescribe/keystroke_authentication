@@ -23,7 +23,7 @@ hold = np.concatenate(np.array(hold), axis=None)
 downdown = np.concatenate(np.array(downdown), axis=None)
 between = np.concatenate(np.array(between), axis=None)
 
-generate_figures(hold, between, downdown)
+generate_figures(hold, between, downdown, "")
 get_statistics(hold, between, downdown)
 
 user_dataset = pd.DataFrame()
