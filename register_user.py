@@ -1,12 +1,33 @@
 import os.path
 import numpy as np
+import pandas as pd
 import pickle
 from neural_network import load_model_from_dir, BLOCK_SIZE
 from keystrokes_recorder2 import record
 
 
+def data_augmentation(data):
+    with open("./model/between_scaler.pickle", 'rb') as file:
+        between_scaler = pickle.load(file)
+    with open("./model/hold_scaler.pickle", 'rb') as file:
+        hold_scaler = pickle.load(file)
+    with open("./model/downdown_scaler.pickle", 'rb') as file:
+        downdown_scaler = pickle.load(file)
+
+    df = pd.DataFrame(data)
+
+    new_data = hold_scaler.transform(df.iloc[:, 0::3].values.tolist())
+    df.iloc[:, 0::3] = pd.DataFrame(new_data)
+    new_data = downdown_scaler.transform(df.iloc[:, 1::3].values.tolist())
+    df.iloc[:, 1::3] = pd.DataFrame(new_data)
+    new_data = between_scaler.transform(df.iloc[:, 2::3].values.tolist())
+    df.iloc[:, 2::3] = pd.DataFrame(new_data)
+
+    return df.to_numpy()
+
+
 def create_template(model, samples, central_vector):
-    """
+    """omp
     Given the user's data (input) calculate the template.
     Use the model to get a vector and central vector to normalize the output.
 
@@ -16,7 +37,8 @@ def create_template(model, samples, central_vector):
     :return: template vector
     """
 
-    temp = np.array(samples)
+    # temp = np.array(samples)omputer1om
+    temp = data_augmentation(samples)
     output = model.predict(temp)
     template = np.mean(output, axis=0)
     template = np.subtract(template, central_vector)
@@ -41,7 +63,7 @@ def register_template(model, central_vector):
         sample = record()
         print(sample)
         if len(sample) < BLOCK_SIZE:
-            print(f"Password should has at least {BLOCK_SIZE//3 + 1} characters!")
+            print(f"Password should has at least {BLOCK_SIZE // 3 + 1} characters!")
             continue
         samples.append(sample[:BLOCK_SIZE])
 

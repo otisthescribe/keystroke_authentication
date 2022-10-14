@@ -1,6 +1,7 @@
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
+import keras.optimizers
 from keras.layers import Dense, Input, Dropout, LSTM
 from keras.models import Sequential, load_model
 from keras.utils import to_categorical
@@ -20,6 +21,9 @@ def load_model_from_dir(directory="./model"):
     :return: Tuple with neural network model and central vector
     """
 
+    model = load_model(directory)
+    temp_data = [0] * 31
+    model.predict(np.array([temp_data]))
     model = load_model(directory)
     with open(directory + "/central_vector.pickle", "rb") as file:
         central_vector = pickle.load(file)
@@ -102,17 +106,19 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     model = Sequential()
     # model.add(Input(shape=(BLOCK_SIZE, 1)))
     model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
-    model.add(Dense(units=34, activation="relu"))
+    model.add(Dense(units=36, activation="relu"))
     model.add(Dense(units=USERS, activation="softmax"))
 
+    opt = keras.optimizers.Adam(learning_rate=0.0015)
+
     model.compile(
-        loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
+        loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"]
     )
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
     history = model.fit(
-        X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=64
+        X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=32
     )
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)

@@ -63,12 +63,13 @@ def read_data(filename="DSL-StrongPasswordData.csv"):
     return train_dataset, eval_dataset
 
 
-def data_augmentation(train_dataset):
+def data_augmentation(train_dataset, eval_dataset):
     """
     Remove the records containg outlines.
     Standardize data using StandardScaler to make
     a mean and variance exual 0.
     Perform it only on the training data.
+    :param eval_dataset: evaluation DataFrame
     :param train_dataset: training DataFrame
     :return: None
     """
@@ -101,11 +102,6 @@ def data_augmentation(train_dataset):
 
     train_dataset.reset_index(inplace=True, drop=True)
 
-    # scaler = StandardScaler()
-    # scaler.fit(train_dataset.iloc[:, 1::].values.tolist())
-    # new_data = scaler.transform(train_dataset.iloc[:, 1::].values.tolist())
-    # train_dataset.iloc[:, 1::] = pandas.DataFrame(new_data)
-
     hold_scaler = StandardScaler()
     hold_scaler.fit(train_dataset.iloc[:, 1::3].values.tolist())
     downdown_scaler = StandardScaler()
@@ -119,6 +115,26 @@ def data_augmentation(train_dataset):
     train_dataset.iloc[:, 2::3] = pandas.DataFrame(new_data)
     new_data = between_scaler.transform(train_dataset.iloc[:, 3::3].values.tolist())
     train_dataset.iloc[:, 3::3] = pandas.DataFrame(new_data)
+
+    # STANDARDIZE THE EVALUATION SET WITH PARAMETERS FROM THE TRAINING SET
+
+    new_data = hold_scaler.transform(eval_dataset.iloc[:, 1::3].values.tolist())
+    eval_dataset.iloc[:, 1::3] = pandas.DataFrame(new_data)
+    new_data = downdown_scaler.transform(eval_dataset.iloc[:, 2::3].values.tolist())
+    eval_dataset.iloc[:, 2::3] = pandas.DataFrame(new_data)
+    new_data = between_scaler.transform(eval_dataset.iloc[:, 3::3].values.tolist())
+    eval_dataset.iloc[:, 3::3] = pandas.DataFrame(new_data)
+
+    # SAVE THE SCALERS FOR FUTURE USE
+
+    with open("../model/hold_scaler.pickle", 'wb') as file:
+        pickle.dump(hold_scaler, file)
+
+    with open("../model/downdown_scaler.pickle", 'wb') as file:
+        pickle.dump(downdown_scaler, file)
+
+    with open("../model/between_scaler.pickle", 'wb') as file:
+        pickle.dump(between_scaler, file)
 
 
 def get_train_dict(train_dataset):
@@ -153,7 +169,7 @@ def get_train_dict(train_dataset):
     downdown = np.concatenate(np.array(downdown), axis=None)
     between = np.concatenate(np.array(between), axis=None)
 
-    generate_figures(hold, between, downdown, "eval")
+    generate_figures(hold, between, downdown, "training")
     get_statistics(hold, between, downdown)
 
     return users
@@ -192,29 +208,29 @@ def get_eval_dict(eval_dataset):
     downdown = np.concatenate(np.array(downdown), axis=None)
     between = np.concatenate(np.array(between), axis=None)
 
-    generate_figures(hold, between, downdown, "eval")
+    generate_figures(hold, between, downdown, "evaluation")
     get_statistics(hold, between, downdown)
 
     return eval_data
 
 
-def generate_figures(hold, between, downdown, temp):
+def generate_figures(hold, between, downdown, suffix=""):
     plt.figure()
     plt.hist(hold, alpha=0.7, bins=50, color="orange")
     plt.xlabel("Hold time")
-    plt.savefig("./hold_times"+temp+".png")
-    plt.show()
+    plt.savefig("hold_times_" + suffix + ".png")
+    plt.show(block=False)
 
     plt.figure()
     plt.hist(downdown, alpha=0.7, bins=50, color="green")
     plt.xlabel("Down down time")
-    plt.savefig("./down_down_times"+temp+".png")
-    plt.show()
+    plt.savefig("downdown_times_" + suffix + ".png")
+    plt.show(block=False)
 
     plt.hist(between, alpha=0.7, bins=50, color="blue")
     plt.xlabel("Between time")
-    plt.savefig("./between_times"+temp+".png")
-    plt.show()
+    plt.savefig("between_times_" + suffix + ".png")
+    plt.show(block=False)
 
 
 def get_statistics(hold, between, downdown):
@@ -249,7 +265,7 @@ def save_data(users, eval_data):
 
 def main():
     train_dataset, eval_dataset = read_data()
-    data_augmentation(train_dataset)
+    data_augmentation(train_dataset, eval_dataset)
     users = get_train_dict(train_dataset)
     eval_data = get_eval_dict(eval_dataset)
     save_data(users, eval_data)

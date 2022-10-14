@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 from keystrokes_recorder2 import record
 from neural_network import check_score
-from register_user import user_exists
+from register_user import user_exists, data_augmentation
 from neural_network import load_model_from_dir, BLOCK_SIZE
 
 
@@ -16,7 +16,7 @@ def create_sample(model, data, central_vector):
     :return: sample vector
     """
 
-    temp = np.array([data])
+    temp = data_augmentation([data])
     output = model.predict(temp)
     sample = np.mean(output, axis=0)
     sample = np.subtract(sample, central_vector)
