@@ -1,8 +1,9 @@
 import pickle
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 import numpy as np
 import keras.optimizers
-from keras.layers import Dense, Input, Dropout, LSTM
+from keras.layers import Dense
 from keras.models import Sequential, load_model
 from keras.utils import to_categorical
 from sklearn.metrics.pairwise import cosine_similarity
@@ -21,9 +22,11 @@ def load_model_from_dir(directory="./model"):
     :return: Tuple with neural network model and central vector
     """
 
+    # Load the model, put some random data inside to initialize the structures
     model = load_model(directory)
     temp_data = [0] * 31
     model.predict(np.array([temp_data]))
+    # Load the model again to already allocated structures
     model = load_model(directory)
     with open(directory + "/central_vector.pickle", "rb") as file:
         central_vector = pickle.load(file)
@@ -84,9 +87,7 @@ def prepare_data(train_data):
     Y = np.array(Y)
 
     Y_oneshot = to_categorical(Y, num_classes=USERS)
-    X_train, X_valid, Y_train, Y_valid = train_test_split(
-        X, Y_oneshot, test_size=0.2, random_state=123
-    )
+    X_train, X_valid, Y_train, Y_valid = train_test_split(X, Y_oneshot, test_size=0.2, random_state=123)
     return X, Y, X_train, X_valid, Y_train, Y_valid
 
 
@@ -102,24 +103,20 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     :return: model, central_vector, history data
     """
 
-    # THIS PART NEEDS TO BE REVISED - HOW MANY NEURONS AND HOW MANY LAYERS
     model = Sequential()
-    # model.add(Input(shape=(BLOCK_SIZE, 1)))
     model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
-    model.add(Dense(units=36, activation="relu"))
+    model.add(Dense(units=64, activation="relu"))
+    model.add(Dense(units=96, activation="relu"))
+    model.add(Dense(units=64, activation="relu"))
     model.add(Dense(units=USERS, activation="softmax"))
 
     opt = keras.optimizers.Adam(learning_rate=0.0015)
 
-    model.compile(
-        loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"]
-    )
+    model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(
-        X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=32
-    )
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=32)
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 
@@ -141,7 +138,7 @@ def enroll_users(model, eval_data, central_vector):
 
     for person_id in eval_data.keys():
 
-        # Divide the dataset into enroll and test vectors
+        # Divide the dataset into enroll and test vectors for each user
         SEP = len(eval_data[person_id]) - 2
 
         # ENROLLMENT VECTOR
@@ -182,7 +179,6 @@ def cross_evaluate(enroll, test):
             a = check_score(userA_model, t)
             confidence_TP_MLP.append(a)
             A.append(a)
-        # print("A:", A)
         # testing with other users' test vectors
         for userB in test.keys():
             if userB != userA:
@@ -190,7 +186,6 @@ def cross_evaluate(enroll, test):
                     b = check_score(userA_model, t)
                     confidence_TN_MLP.append(b)
                     B.append(b)
-        # print("B:", B)
 
     confidence_TP_MLP = np.squeeze(np.array(confidence_TP_MLP))
     confidence_TN_MLP = np.squeeze(np.array(confidence_TN_MLP))
@@ -213,14 +208,14 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
 
     # Number of true negatives vs number of true positives
     plt.figure()
-    n_TP, bins_TP, patches_TP = plt.hist(confidence_TP_MLP, alpha=0.5, bins=400)
+    n_TP, bins_TP, patches_TP = plt.hist(confidence_TP_MLP, alpha=1, bins=400)
     n_TN, bins_TN, patches_TN = plt.hist(confidence_TN_MLP, alpha=0.5, bins=400)
     plt.legend(["score True Positive", "score True Negative"])
     plt.xlim([-1, 1])
     plt.xlabel("score")
     plt.grid()
     plt.savefig("./plots/confidence_TP_TN.png")
-    plt.show()
+    plt.show(block=False)
 
     # Probability of true negatives based on the threshold
     plt.figure()
@@ -230,7 +225,31 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
     plt.xlabel("threshold")
     plt.ylabel("probability")
     plt.savefig("./plots/threshold_probability.png")
-    plt.show()
+    plt.show(block=False)
+    #
+    # tn_sum = np.sum(n_TN)
+    # tp_sum = np.sum(n_TP)
+    #
+    # frr = np.cumsum(n_TP)
+    # for i in range(len(frr)):
+    #     frr[i] /= tp_sum
+    #
+    # far = np.cumsum(n_TN)
+    # for i in range(len(far)):
+    #     far[i] /= tn_sum
+    #     far[i] = 1 - far[i]
+    #
+    # # DET CURVE
+    # plt.figure()
+    # plt.yscale('log')
+    # plt.xscale('log')
+    # plt.grid()
+    # plt.plot(far * 100, frr * 100)
+    # plt.xlabel('false acceptance rate (%)')
+    # plt.ylabel('false rejection rate (%)')
+    # plt.xlim(0, 100)
+    # plt.ylim(0, 100)
+    # plt.show()
 
 
 def model_accuracy_figure(history):
@@ -249,7 +268,7 @@ def model_accuracy_figure(history):
     plt.xlabel("Epoch")
     plt.legend(["Train", "Test"], loc="upper left")
     plt.savefig("./plots/model_accuracy.png")
-    plt.show()
+    plt.show(block=False)
 
     # Model loss
     plt.figure()
@@ -260,7 +279,7 @@ def model_accuracy_figure(history):
     plt.xlabel("Epoch")
     plt.legend(["Train", "Test"], loc="upper left")
     plt.savefig("./plots/model_loss.png")
-    plt.show()
+    plt.show(block=False)
 
 
 def save_model(model, directory="model"):
@@ -293,7 +312,7 @@ def main():
     """
 
     eval_data, train_data = read_data()
-    X, Y, X_train, X_valid, Y_train, Y_valid = prepare_data(eval_data)
+    X, Y, X_train, X_valid, Y_train, Y_valid = prepare_data(train_data)
 
     model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid)
     enroll, test = enroll_users(model, eval_data, central_vector)

@@ -4,7 +4,7 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import statistics
-from sklearn.preprocessing import StandardScaler, normalize
+from sklearn.preprocessing import StandardScaler
 import random
 
 USERS = 41  # number of users - it will be the size of an output vector
@@ -47,7 +47,7 @@ def read_data(filename="DSL-StrongPasswordData.csv"):
     :return: training and evaluation datasets
     """
 
-    data51 = pd.read_csv("DSL-StrongPasswordData.csv")
+    data51 = pd.read_csv(filename)
     data51 = data51.drop(["sessionIndex", "rep"], axis=1)
 
     # Shuffle the data before splitting
