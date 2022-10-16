@@ -105,9 +105,7 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
 
     model = Sequential()
     model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
-    model.add(Dense(units=64, activation="relu"))
-    model.add(Dense(units=96, activation="relu"))
-    model.add(Dense(units=64, activation="relu"))
+    model.add(Dense(units=32, activation="relu"))
     model.add(Dense(units=USERS, activation="softmax"))
 
     opt = keras.optimizers.Adam(learning_rate=0.0015)
@@ -139,6 +137,7 @@ def enroll_users(model, eval_data, central_vector):
     for person_id in eval_data.keys():
 
         # Divide the dataset into enroll and test vectors for each user
+        # N-1 samples for enroll vector and 1 for the test vector
         SEP = len(eval_data[person_id]) - 2
 
         # ENROLLMENT VECTOR
@@ -208,8 +207,8 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
 
     # Number of true negatives vs number of true positives
     plt.figure()
-    n_TP, bins_TP, patches_TP = plt.hist(confidence_TP_MLP, alpha=1, bins=400)
-    n_TN, bins_TN, patches_TN = plt.hist(confidence_TN_MLP, alpha=0.5, bins=400)
+    n_TP, bins_TP, patches_TP = plt.hist(confidence_TP_MLP, alpha=1, bins=100)
+    n_TN, bins_TN, patches_TN = plt.hist(confidence_TN_MLP, alpha=0.5, bins=100)
     plt.legend(["score True Positive", "score True Negative"])
     plt.xlim([-1, 1])
     plt.xlabel("score")
@@ -226,19 +225,19 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
     plt.ylabel("probability")
     plt.savefig("./plots/threshold_probability.png")
     plt.show(block=False)
-    #
-    # tn_sum = np.sum(n_TN)
-    # tp_sum = np.sum(n_TP)
-    #
-    # frr = np.cumsum(n_TP)
-    # for i in range(len(frr)):
-    #     frr[i] /= tp_sum
-    #
-    # far = np.cumsum(n_TN)
-    # for i in range(len(far)):
-    #     far[i] /= tn_sum
-    #     far[i] = 1 - far[i]
-    #
+
+    tn_sum = np.sum(n_TN)
+    tp_sum = np.sum(n_TP)
+
+    frr = np.cumsum(n_TP)
+    for i in range(len(frr)):
+        frr[i] /= tp_sum
+
+    far = np.cumsum(n_TN)
+    for i in range(len(far)):
+        far[i] /= tn_sum
+        far[i] = 1 - far[i]
+
     # # DET CURVE
     # plt.figure()
     # plt.yscale('log')
@@ -247,8 +246,8 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
     # plt.plot(far * 100, frr * 100)
     # plt.xlabel('false acceptance rate (%)')
     # plt.ylabel('false rejection rate (%)')
-    # plt.xlim(0, 100)
-    # plt.ylim(0, 100)
+    # # plt.xlim(0, 100)
+    # # plt.ylim(0, 100)
     # plt.show()
 
 
@@ -311,7 +310,7 @@ def main():
     Model and a central vector are saved to ./model folder.
     """
 
-    eval_data, train_data = read_data()
+    train_data, eval_data = read_data()
     X, Y, X_train, X_valid, Y_train, Y_valid = prepare_data(train_data)
 
     model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid)
