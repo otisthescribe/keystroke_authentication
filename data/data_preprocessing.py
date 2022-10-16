@@ -136,6 +136,8 @@ def data_augmentation(train_dataset, eval_dataset):
     with open("../model/between_scaler.pickle", 'wb') as file:
         pickle.dump(between_scaler, file)
 
+    return train_dataset, eval_dataset
+
 
 def get_train_dict(train_dataset):
     """
@@ -265,7 +267,7 @@ def save_data(users, eval_data):
 
 def main():
     train_dataset, eval_dataset = read_data()
-    data_augmentation(train_dataset, eval_dataset)
+    train_dataset, eval_dataset = data_augmentation(train_dataset, eval_dataset)
     users = get_train_dict(train_dataset)
     eval_data = get_eval_dict(eval_dataset)
     save_data(users, eval_data)

@@ -16,7 +16,8 @@ def create_sample(model, data, central_vector):
     :return: sample vector
     """
 
-    temp = data_augmentation([data])
+    # temp = data_augmentation([data])
+    temp = np.array([data])
     output = model.predict(temp)
     sample = np.mean(output, axis=0)
     sample = np.subtract(sample, central_vector)

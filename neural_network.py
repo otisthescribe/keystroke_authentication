@@ -9,8 +9,11 @@ from keras.utils import to_categorical
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
 from data.data_preprocessing import USERS
+import sys
 
 BLOCK_SIZE = 31  # number of attributes - it will be the size of an input vector
+
+np.set_printoptions(threshold=sys.maxsize)
 
 
 def load_model_from_dir(directory="./model"):
@@ -105,7 +108,9 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
 
     model = Sequential()
     model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
-    model.add(Dense(units=32, activation="relu"))
+    model.add(Dense(units=34, activation="relu"))
+    model.add(Dense(units=40, activation="relu"))
+    model.add(Dense(units=34, activation="relu"))
     model.add(Dense(units=USERS, activation="softmax"))
 
     opt = keras.optimizers.Adam(learning_rate=0.0015)
@@ -114,7 +119,7 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=32)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=64)
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 
@@ -134,11 +139,21 @@ def enroll_users(model, eval_data, central_vector):
     enroll = {}  # key = person_id ; value = template
     test = {}  # key = person_id ; value = samples (1 or more)
 
+    # CENTRAL VECTOR FROM EVAL DATA
+
+    # X = []
+    # for person_id in eval_data.keys():
+    #     for i in eval_data[person_id]:
+    #         X.append(i)
+    #
+    # vector_probes = model.predict(X)
+    # central_vector = np.mean(vector_probes, axis=0)
+
     for person_id in eval_data.keys():
 
         # Divide the dataset into enroll and test vectors for each user
-        # N-1 samples for enroll vector and 1 for the test vector
-        SEP = len(eval_data[person_id]) - 2
+        # SEP samples for enroll and the rest for test
+        SEP = 50
 
         # ENROLLMENT VECTOR
         temp = eval_data[person_id][:SEP]

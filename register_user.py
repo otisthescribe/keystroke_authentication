@@ -37,8 +37,8 @@ def create_template(model, samples, central_vector):
     :return: template vector
     """
 
-    # temp = np.array(samples)omputer1om
-    temp = data_augmentation(samples)
+    temp = np.array(samples)
+    # temp = data_augmentation(samples)
     output = model.predict(temp)
     template = np.mean(output, axis=0)
     template = np.subtract(template, central_vector)
@@ -55,7 +55,7 @@ def register_template(model, central_vector):
     :return: biometric template
     """
 
-    probes_number = 10
+    probes_number = 20
     print(f"Sumbit your password {probes_number} times:")
     samples = []
     while len(samples) < probes_number:
