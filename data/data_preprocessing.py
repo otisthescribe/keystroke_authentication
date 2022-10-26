@@ -217,6 +217,7 @@ def get_eval_dict(eval_dataset):
 
 
 def generate_figures(hold, between, downdown, suffix=""):
+
     plt.figure()
     plt.hist(hold, alpha=0.7, bins=50, color="orange")
     plt.xlabel("Hold time")
@@ -229,6 +230,7 @@ def generate_figures(hold, between, downdown, suffix=""):
     plt.savefig("downdown_times_" + suffix + ".png")
     plt.show(block=False)
 
+    plt.figure()
     plt.hist(between, alpha=0.7, bins=50, color="blue")
     plt.xlabel("Between time")
     plt.savefig("between_times_" + suffix + ".png")

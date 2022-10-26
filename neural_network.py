@@ -119,7 +119,7 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=64)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=156, batch_size=64)
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 
@@ -253,17 +253,33 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
         far[i] /= tn_sum
         far[i] = 1 - far[i]
 
-    # # DET CURVE
-    # plt.figure()
-    # plt.yscale('log')
-    # plt.xscale('log')
-    # plt.grid()
-    # plt.plot(far * 100, frr * 100)
-    # plt.xlabel('false acceptance rate (%)')
-    # plt.ylabel('false rejection rate (%)')
-    # # plt.xlim(0, 100)
-    # # plt.ylim(0, 100)
-    # plt.show()
+    # FAR FRR figure
+    plt.figure()
+    plt.plot(bins_TP[1:], frr)
+    plt.plot(bins_TN[1:], far)
+    legend_f = ['false acceptance rate', 'false rejection rate']
+    plt.legend(legend_f, loc='upper center')
+    plt.xlabel('threshold')
+    plt.ylabel('probability')
+    plt.grid()
+    plt.show(block=False)
+    plt.savefig("./plots/far_frr.png")
+
+    # DET CURVE
+    plt.figure(figsize=(10, 10))
+    # fig, ax = plt.subplots(figsize=(10, 10))
+    plt.yscale('log')
+    plt.xscale('log')
+    # ticks_to_use = [8, 15, 20, 27, 30, 50, 60, 70, 75, 80, 90, 100]
+    # ax.set_xticks(ticks_to_use)
+    # ax.set_yticks(ticks_to_use)
+    plt.plot(far * 100, frr * 100)
+    plt.axis([8, 100, 8, 100])
+    plt.grid()
+    plt.xlabel('false acceptance rate (%)')
+    plt.ylabel('false rejection rate (%)')
+    plt.show(block=False)
+    plt.savefig("./plots/det_curve.png")
 
 
 def model_accuracy_figure(history):
