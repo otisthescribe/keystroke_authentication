@@ -3,15 +3,16 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 import numpy as np
 import keras.optimizers
-from keras.layers import Dense
+from keras.layers import Dense, Input, Flatten
 from keras.models import Sequential, load_model
 from keras.utils import to_categorical
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
-from data.data_preprocessing import USERS
+from new_data.data_preprocessing import TRAINING_USERS, PROBE_SIZE
 import sys
 
-BLOCK_SIZE = 31  # number of attributes - it will be the size of an input vector
+INPUT_SIZE = (3, PROBE_SIZE)  # number of attributes - it will be the size of an input vector
+ENROLL_SIZE = 50
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -43,10 +44,10 @@ def read_data():
     :return: train_data and eval_data dictionaries
     """
 
-    with open("./data/train_user_data.pickle", "rb") as file:
+    with open("./new_data/training_data.pickle", "rb") as file:
         train_data = pickle.load(file)
 
-    with open("./data/eval_user_data.pickle", "rb") as file:
+    with open("./new_data/evaluation_data.pickle", "rb") as file:
         eval_data = pickle.load(file)
 
     return train_data, eval_data
@@ -89,7 +90,7 @@ def prepare_data(train_data):
     X = np.array(X)
     Y = np.array(Y)
 
-    Y_oneshot = to_categorical(Y, num_classes=USERS)
+    Y_oneshot = to_categorical(Y, num_classes=TRAINING_USERS)
     X_train, X_valid, Y_train, Y_valid = train_test_split(X, Y_oneshot, test_size=0.2, random_state=123)
     return X, Y, X_train, X_valid, Y_train, Y_valid
 
@@ -107,19 +108,18 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     """
 
     model = Sequential()
-    model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
-    model.add(Dense(units=34, activation="relu"))
-    model.add(Dense(units=40, activation="relu"))
-    model.add(Dense(units=34, activation="relu"))
-    model.add(Dense(units=USERS, activation="softmax"))
+    model.add(Input(shape=INPUT_SIZE))  # Input tensor
+    model.add(Flatten())
+    model.add(Dense(units=TRAINING_USERS//2, activation="relu"))
+    model.add(Dense(units=TRAINING_USERS, activation="softmax"))
 
-    opt = keras.optimizers.Adam(learning_rate=0.0015)
+    opt = keras.optimizers.Adam()
 
     model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=156, batch_size=64)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=16, batch_size=32)
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 
@@ -153,7 +153,7 @@ def enroll_users(model, eval_data, central_vector):
 
         # Divide the dataset into enroll and test vectors for each user
         # SEP samples for enroll and the rest for test
-        SEP = 50
+        SEP = ENROLL_SIZE
 
         # ENROLLMENT VECTOR
         temp = eval_data[person_id][:SEP]
