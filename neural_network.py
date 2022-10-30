@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 from new_data.data_preprocessing import TRAINING_USERS, PROBE_SIZE
 import sys
 
-INPUT_SIZE = (3, PROBE_SIZE)  # number of attributes - it will be the size of an input vector
+INPUT_SIZE = (32, PROBE_SIZE)  # number of attributes - it will be the size of an input vector
 ENROLL_SIZE = 10
 
 np.set_printoptions(threshold=sys.maxsize)

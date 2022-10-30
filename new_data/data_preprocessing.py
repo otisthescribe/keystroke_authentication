@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from progress.bar import Bar
 
-TRAINING_USERS = 10
+TRAINING_USERS = 100
 EVALUATION_USERS = 10
 USERS = TRAINING_USERS + EVALUATION_USERS
 FILES_TO_READ = 4 * USERS
@@ -107,10 +107,12 @@ def ascii_encoding(keycodes):
     # onehot[26] -> SPACE
     # onehot[27] -> SHIFT
     # onehot[28] -> others
-    onehot = [[0] * 29] * len(keycodes)
+
     # ASCII A - Z => 65 -> 90
     # SPACE => 32
     # SHIFT => 16
+
+    onehot = [[0 for _ in range(29)] for _ in range(len(keycodes))]
     for i in range(len(keycodes)):
         key = keycodes[i]
         if 65 <= key <= 90:
@@ -140,10 +142,7 @@ def get_user_data(data):
 
         keycodes = ascii_encoding(group['KEYCODE'].to_numpy())
         group.drop(['KEYCODE'], inplace=True, axis=1)
-        output = pd.concat([group, keycodes], axis=1)
-
-        print(output)
-        exit(0)
+        output = pd.concat([group.reset_index(drop=True), keycodes.reset_index(drop=True)], axis=1, ignore_index=True)
 
         transposed = output.T
 
@@ -230,7 +229,7 @@ def main():
             try:
                 file_path = "./Keystrokes/files/" + filename
                 data = pd.read_csv(file_path, sep="\t", encoding="utf-8")
-                data.drop(['SENTENCE', 'USER_INPUT', 'LETTERS', 'KEYSTROKE_ID'], inplace=True, axis=1)
+                data.drop(['SENTENCE', 'USER_INPUT', 'LETTER', 'KEYSTROKE_ID'], inplace=True, axis=1)
                 data.rename(columns={'TEST_SECTION_ID': 'SECTION_ID'}, inplace=True)
                 data['HOLD'] = data['RELEASE_TIME'] - data['PRESS_TIME']
                 data['BETWEEN'] = data['PRESS_TIME'] - data['RELEASE_TIME'].shift()
