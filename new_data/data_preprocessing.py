@@ -9,13 +9,12 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from progress.bar import Bar
 
-TRAINING_USERS = 3000
-EVALUATION_USERS = 30
+TRAINING_USERS = 10
+EVALUATION_USERS = 10
 USERS = TRAINING_USERS + EVALUATION_USERS
 FILES_TO_READ = 4 * USERS
 PROBE_SIZE = 10
 MIN_SECTIONS = 15
-
 
 REMOVE_OUTLIERS = True
 DATA_AUGMENTATION = True
@@ -100,6 +99,33 @@ def get_statistics(hold, between, downdown, title="DATA PARAMETERS"):
     return stat
 
 
+def ascii_encoding(keycodes):
+    # onehot[0] -> a
+    # onehot[1] -> b
+    # ....
+    # onehot[25] -> z
+    # onehot[26] -> SPACE
+    # onehot[27] -> SHIFT
+    # onehot[28] -> others
+    onehot = [[0] * 29] * len(keycodes)
+    # ASCII A - Z => 65 -> 90
+    # SPACE => 32
+    # SHIFT => 16
+    for i in range(len(keycodes)):
+        key = keycodes[i]
+        if 65 <= key <= 90:
+            onehot[i][key - 65] = 1
+        elif key == 32:
+            onehot[i][26] = 1
+        elif key == 16:
+            onehot[i][27] = 1
+        else:
+            onehot[i][28] = 1
+
+    df = pd.DataFrame(onehot)
+    return df
+
+
 def get_user_data(data):
     hold = np.array([])
     between = np.array([])
@@ -108,11 +134,18 @@ def get_user_data(data):
     user_data = []
     for name, group in grouped:
         group.drop(['SECTION_ID', 'PARTICIPANT_ID'], inplace=True, axis=1)
-        group.drop(index=group.index[0], axis=0, inplace=True)
         hold = np.append(hold, group['HOLD'].to_numpy())
         between = np.append(between, group['BETWEEN'].to_numpy())
         downdown = np.append(downdown, group['DOWNDOWN'].to_numpy())
-        transposed = group.T
+
+        keycodes = ascii_encoding(group['KEYCODE'].to_numpy())
+        group.drop(['KEYCODE'], inplace=True, axis=1)
+        output = pd.concat([group, keycodes], axis=1)
+
+        print(output)
+        exit(0)
+
+        transposed = output.T
 
         for i in range(len(group) - PROBE_SIZE):
             chunk = transposed.iloc[:, i:i + PROBE_SIZE].to_numpy()
@@ -130,6 +163,8 @@ def remove_outliers(data):
     max_downdown = DDA[int(len(DDA) * 0.999)]
     max_between = BA[int(len(BA) * 0.999)]
 
+    min_between = BA[int(len(BA) * (1 - 0.999))]
+
     sessions = data.groupby('SECTION_ID')
     bar = Bar('Remove invalid sessions', max=len(list(sessions.groups.keys())))
     for section_id, session in sessions:
@@ -139,7 +174,7 @@ def remove_outliers(data):
         elif max(session["DOWNDOWN"]) > max_downdown or np.isnan(session["BETWEEN"].to_numpy()).any():
             data.drop(data.loc[data['SECTION_ID'] == section_id].index, inplace=True)
 
-        elif max(session["BETWEEN"]) > max_between or np.isnan(session["DOWNDOWN"].to_numpy()).any():
+        elif min(session["BETWEEN"]) < min_between or max(session["BETWEEN"]) > max_between or np.isnan(session["DOWNDOWN"].to_numpy()).any():
             data.drop(data.loc[data['SECTION_ID'] == section_id].index, inplace=True)
 
         bar.next()
@@ -195,7 +230,7 @@ def main():
             try:
                 file_path = "./Keystrokes/files/" + filename
                 data = pd.read_csv(file_path, sep="\t", encoding="utf-8")
-                data.drop(['SENTENCE', 'USER_INPUT', 'LETTER', 'KEYCODE', 'KEYSTROKE_ID'], inplace=True, axis=1)
+                data.drop(['SENTENCE', 'USER_INPUT', 'LETTERS', 'KEYSTROKE_ID'], inplace=True, axis=1)
                 data.rename(columns={'TEST_SECTION_ID': 'SECTION_ID'}, inplace=True)
                 data['HOLD'] = data['RELEASE_TIME'] - data['PRESS_TIME']
                 data['BETWEEN'] = data['PRESS_TIME'] - data['RELEASE_TIME'].shift()
@@ -227,6 +262,12 @@ def main():
         if user_count < USERS:
             print("Not enough eligible users to continue.")
             exit(0)
+
+        hold = new_data["HOLD"].to_numpy()
+        between = new_data["BETWEEN"].to_numpy()
+        downdown = new_data["DOWNDOWN"].to_numpy()
+        generate_figures(hold, between, downdown, suffix="outliers_removed")
+        get_statistics(hold[~np.isnan(hold)], between[~np.isnan(between)], downdown[~np.isnan(downdown)], "OUTLIERS REMOVED")
 
     # SHUFFLE USERS AND DATA
     if DATA_SHUFFLE:
