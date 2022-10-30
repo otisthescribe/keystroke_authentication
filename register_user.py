@@ -2,7 +2,7 @@ import os.path
 import numpy as np
 import pandas as pd
 import pickle
-from neural_network import load_model_from_dir, BLOCK_SIZE
+from neural_network import load_model_from_dir, INPUT_SIZE
 from keystrokes_recorder2 import record
 
 

@@ -1,3 +1,5 @@
 /user_data/user_data.pickle
 /.idea
 /new_data/Keystrokes/
+/new_data/training_data.pickle
+/new_data/evaluation_data.pickle

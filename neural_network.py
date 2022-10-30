@@ -3,16 +3,17 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 import numpy as np
 import keras.optimizers
-from keras.layers import Dense, Input, Flatten
+from keras.layers import Dense, Input, Flatten, BatchNormalization, LSTM, Bidirectional, Dropout
 from keras.models import Sequential, load_model
 from keras.utils import to_categorical
+from keras.optimizers import RMSprop, Adam
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
 from new_data.data_preprocessing import TRAINING_USERS, PROBE_SIZE
 import sys
 
 INPUT_SIZE = (3, PROBE_SIZE)  # number of attributes - it will be the size of an input vector
-ENROLL_SIZE = 50
+ENROLL_SIZE = 10
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -107,19 +108,33 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     :return: model, central_vector, history data
     """
 
+    # model = Sequential()
+    # model.add(Input(shape=INPUT_SIZE))
+    # # model.add(Dense(units=TRAINING_USERS//4, activation="relu", kernel_regularizer='l2', input_shape=INPUT_SIZE))
+    # model.add(Dense(units=TRAINING_USERS//2, activation="relu", kernel_regularizer='l2', input_shape=INPUT_SIZE))
+    # model.add(Flatten())
+    # model.add(Dense(units=TRAINING_USERS, activation="softmax"))
+    #
+    # opt = keras.optimizers.Adam()
+    # model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+    # model.summary()
+
     model = Sequential()
-    model.add(Input(shape=INPUT_SIZE))  # Input tensor
+    model.add(Input(shape=INPUT_SIZE))
+    model.add(BatchNormalization())
+    forward_LSTM = LSTM(units=64, return_sequences=True)
+    backward_LSTM = LSTM(units=64, return_sequences=True, go_backwards=True)
+    model.add(Bidirectional(forward_LSTM, backward_layer=backward_LSTM, input_shape=INPUT_SIZE))
+    model.add(BatchNormalization())
     model.add(Flatten())
-    model.add(Dense(units=TRAINING_USERS//2, activation="relu"))
-    model.add(Dense(units=TRAINING_USERS, activation="softmax"))
-
-    opt = keras.optimizers.Adam()
-
-    model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+    model.add(Dropout(0.3))
+    model.add(Dense(TRAINING_USERS, activation="softmax", kernel_regularizer='l2'))
+    select_optimizer = Adam()
+    model.compile(loss='categorical_crossentropy', optimizer=select_optimizer, metrics=['accuracy'])
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=16, batch_size=32)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=256)
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 

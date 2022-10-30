@@ -7,12 +7,15 @@ import pickle
 import re
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
+from progress.bar import Bar
 
-TRAINING_USERS = 200
-EVALUATION_USERS = 20
+TRAINING_USERS = 3000
+EVALUATION_USERS = 30
 USERS = TRAINING_USERS + EVALUATION_USERS
+FILES_TO_READ = 4 * USERS
 PROBE_SIZE = 10
-MIN_SECTIONS = 10
+MIN_SECTIONS = 15
+
 
 REMOVE_OUTLIERS = True
 DATA_AUGMENTATION = True
@@ -110,6 +113,7 @@ def get_user_data(data):
         between = np.append(between, group['BETWEEN'].to_numpy())
         downdown = np.append(downdown, group['DOWNDOWN'].to_numpy())
         transposed = group.T
+
         for i in range(len(group) - PROBE_SIZE):
             chunk = transposed.iloc[:, i:i + PROBE_SIZE].to_numpy()
             user_data.append(chunk)
@@ -127,26 +131,37 @@ def remove_outliers(data):
     max_between = BA[int(len(BA) * 0.999)]
 
     sessions = data.groupby('SECTION_ID')
+    bar = Bar('Remove invalid sessions', max=len(list(sessions.groups.keys())))
     for section_id, session in sessions:
-        if max(session["HOLD"]) > max_hold:
+        if max(session["HOLD"]) > max_hold or np.isnan(session["HOLD"].to_numpy()).any():
             data.drop(data.loc[data['SECTION_ID'] == section_id].index, inplace=True)
 
-        elif max(session["DOWNDOWN"]) > max_downdown:
+        elif max(session["DOWNDOWN"]) > max_downdown or np.isnan(session["BETWEEN"].to_numpy()).any():
             data.drop(data.loc[data['SECTION_ID'] == section_id].index, inplace=True)
 
-        elif max(session["BETWEEN"]) > max_between:
+        elif max(session["BETWEEN"]) > max_between or np.isnan(session["DOWNDOWN"].to_numpy()).any():
             data.drop(data.loc[data['SECTION_ID'] == section_id].index, inplace=True)
+
+        bar.next()
+
+    bar.finish()
 
     # DROP PARTICIPANTS WITH LESS THAN MIN_SECTIONS SECTIONS
     participants = data.groupby('PARTICIPANT_ID')
+    user_count = len(list(participants.groups.keys()))
+    bar = Bar('Remove ineligible participants', max=len(list(participants.groups.keys())))
     for participant_id, participant in participants:
         sections = participant.groupby('SECTION_ID')
         section_keys = list(sections.groups.keys())
         if len(section_keys) < MIN_SECTIONS:
             data.drop(data.loc[data['PARTICIPANT_ID'] == participant_id].index, inplace=True)
+            user_count -= 1
+        bar.next()
+
+    bar.finish()
 
     data.reset_index(inplace=True, drop=True)
-    return data
+    return data, user_count
 
 
 def data_augmentation(data, hold_scaler=None, between_scaler=None, downdown_scaler=None):
@@ -174,8 +189,9 @@ def main():
     random.shuffle(files_list)
     data_list = []
     count_users = 0
+    bar = Bar('Loading files', max=FILES_TO_READ)
     for filename in files_list:
-        if count_users < 2 * USERS and re.search(r"\d+_keystrokes\.txt", filename) is not None:
+        if count_users < FILES_TO_READ and re.search(r"\d+_keystrokes\.txt", filename) is not None:
             try:
                 file_path = "./Keystrokes/files/" + filename
                 data = pd.read_csv(file_path, sep="\t", encoding="utf-8")
@@ -185,12 +201,17 @@ def main():
                 data['BETWEEN'] = data['PRESS_TIME'] - data['RELEASE_TIME'].shift()
                 data['DOWNDOWN'] = data['PRESS_TIME'] - data['PRESS_TIME'].shift()
                 data.drop(['PRESS_TIME', 'RELEASE_TIME'], inplace=True, axis=1)
+
+                data = data.groupby('SECTION_ID').apply(lambda group: group.iloc[1:, :])
                 data_list.append(data)
                 count_users += 1
             except Exception:
                 continue
         else:
             break
+        bar.next()
+
+    bar.finish()
 
     # CREATE A DATAFRAME FROM ALL THE DATA
     new_data = pd.concat(data_list, ignore_index=True)
@@ -201,7 +222,11 @@ def main():
     get_statistics(hold[~np.isnan(hold)], between[~np.isnan(between)], downdown[~np.isnan(downdown)], "RAW")
     # REMOVE OUTLIERS
     if REMOVE_OUTLIERS:
-        new_data = remove_outliers(new_data)
+        new_data, user_count = remove_outliers(new_data)
+        print(f"Removed {FILES_TO_READ - user_count} outliers. {user_count} users with {MIN_SECTIONS} sections left.")
+        if user_count < USERS:
+            print("Not enough eligible users to continue.")
+            exit(0)
 
     # SHUFFLE USERS AND DATA
     if DATA_SHUFFLE:
@@ -212,6 +237,7 @@ def main():
 
     # STANDARDIZE THE DATA
     if DATA_AUGMENTATION:
+        print("Data augmentation...")
         train_dataset, hold_scaler, between_scaler, downdown_scaler = data_augmentation(train_dataset)
         eval_dataset = data_augmentation(eval_dataset, hold_scaler, between_scaler, downdown_scaler)[0]
         with open("./hold_scaler.pickle", 'wb') as fd:
@@ -229,6 +255,7 @@ def main():
     DOWNDOWN = np.array([])
     participants = train_dataset.groupby('PARTICIPANT_ID')
     training_users_count = 0
+    bar = Bar('Get data (training)', max=len(list(participants.groups.keys())))
     for participant_id, participant in participants:
         result, hold, between, downdown = get_user_data(participant)
         training_users[training_users_count] = result
@@ -236,9 +263,12 @@ def main():
         HOLD = np.append(HOLD, hold)
         BETWEEN = np.append(BETWEEN, between)
         DOWNDOWN = np.append(DOWNDOWN, downdown)
+        bar.next()
 
-    generate_figures(HOLD, BETWEEN, DOWNDOWN, suffix="training")
-    get_statistics(HOLD, BETWEEN, DOWNDOWN, "TRAINING")
+    bar.finish()
+
+    generate_figures(HOLD[~np.isnan(HOLD)], BETWEEN[~np.isnan(BETWEEN)], DOWNDOWN[~np.isnan(DOWNDOWN)], suffix="training")
+    get_statistics(HOLD[~np.isnan(HOLD)], BETWEEN[~np.isnan(BETWEEN)], DOWNDOWN[~np.isnan(DOWNDOWN)], "TRAINING")
 
     with open("training_data.pickle", "wb") as fd:
         pickle.dump(training_users, fd)
@@ -251,6 +281,7 @@ def main():
     DOWNDOWN = np.array([])
     participants = eval_dataset.groupby('PARTICIPANT_ID')
     evaluation_users_count = 0
+    bar = Bar('Get data (evaluation)', max=len(list(participants.groups.keys())))
     for participant_id, participant in participants:
         result, hold, between, downdown = get_user_data(participant)
         evaluation_users[evaluation_users_count] = result
@@ -258,9 +289,12 @@ def main():
         HOLD = np.append(HOLD, hold)
         BETWEEN = np.append(BETWEEN, between)
         DOWNDOWN = np.append(DOWNDOWN, downdown)
+        bar.next()
 
-    generate_figures(HOLD, BETWEEN, DOWNDOWN, suffix="evaluation")
-    get_statistics(HOLD, BETWEEN, DOWNDOWN, "EVALUATION")
+    bar.finish()
+
+    generate_figures(HOLD[~np.isnan(HOLD)], BETWEEN[~np.isnan(BETWEEN)], DOWNDOWN[~np.isnan(DOWNDOWN)], suffix="evaluation")
+    get_statistics(HOLD[~np.isnan(HOLD)], BETWEEN[~np.isnan(BETWEEN)], DOWNDOWN[~np.isnan(DOWNDOWN)], "EVALUATION")
 
     with open("evaluation_data.pickle", "wb") as fd:
         pickle.dump(evaluation_users, fd)
