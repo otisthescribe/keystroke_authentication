@@ -2,8 +2,8 @@ import pickle
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 import numpy as np
-import keras.optimizers
-from keras.layers import Dense
+from keras.optimizers import Adam, RMSprop
+from keras.layers import Dense, Flatten, Dropout, Input, BatchNormalization, Bidirectional, LSTM
 from keras.models import Sequential, load_model
 from keras.utils import to_categorical
 from sklearn.metrics.pairwise import cosine_similarity
@@ -12,8 +12,7 @@ from data.data_preprocessing import USERS
 import sys
 
 BLOCK_SIZE = 31  # number of attributes - it will be the size of an input vector
-
-np.set_printoptions(threshold=sys.maxsize)
+INPUT_SHAPE = (10, 3)
 
 
 def load_model_from_dir(directory="./model"):
@@ -106,17 +105,32 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     :return: model, central_vector, history data
     """
 
+    # model = Sequential()
+    # model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
+    # model.add(Dense(units=34, activation="relu"))
+    # model.add(Dense(units=40, activation="relu"))
+    # model.add(Dense(units=34, activation="relu"))
+    # model.add(Dense(units=USERS, activation="softmax"))
+    #
+    # opt = keras.optimizers.Adam(learning_rate=0.0015)
+    #
+    # model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+    # model.summary()
+
     model = Sequential()
-    model.add(Dense(units=BLOCK_SIZE, input_dim=BLOCK_SIZE, activation="relu"))
-    model.add(Dense(units=34, activation="relu"))
-    model.add(Dense(units=40, activation="relu"))
-    model.add(Dense(units=34, activation="relu"))
-    model.add(Dense(units=USERS, activation="softmax"))
+    model.add(Input(shape=INPUT_SHAPE))
+    model.add(BatchNormalization())
+    forward_LSTM = LSTM(units=64, return_sequences=True)
+    backward_LSTM = LSTM(units=64, return_sequences=True, go_backwards=True)
+    model.add(Bidirectional(forward_LSTM, backward_layer=backward_LSTM, input_shape=INPUT_SHAPE))
+    model.add(BatchNormalization())
+    model.add(Flatten())
+    model.add(Dropout(0.1))
+    model.add(Dense(41, activation="softmax"))
 
-    opt = keras.optimizers.Adam(learning_rate=0.0015)
-
-    model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
-    model.summary()
+    select_optimizer = Adam()
+    model.compile(loss='categorical_crossentropy', optimizer=select_optimizer, metrics=['accuracy'])
+    model_summary = model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
     history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=64)
@@ -139,21 +153,11 @@ def enroll_users(model, eval_data, central_vector):
     enroll = {}  # key = person_id ; value = template
     test = {}  # key = person_id ; value = samples (1 or more)
 
-    # CENTRAL VECTOR FROM EVAL DATA
-
-    # X = []
-    # for person_id in eval_data.keys():
-    #     for i in eval_data[person_id]:
-    #         X.append(i)
-    #
-    # vector_probes = model.predict(X)
-    # central_vector = np.mean(vector_probes, axis=0)
-
     for person_id in eval_data.keys():
 
         # Divide the dataset into enroll and test vectors for each user
         # SEP samples for enroll and the rest for test
-        SEP = 50
+        SEP = 10
 
         # ENROLLMENT VECTOR
         temp = eval_data[person_id][:SEP]
@@ -252,18 +256,6 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
     for i in range(len(far)):
         far[i] /= tn_sum
         far[i] = 1 - far[i]
-
-    # # DET CURVE
-    # plt.figure()
-    # plt.yscale('log')
-    # plt.xscale('log')
-    # plt.grid()
-    # plt.plot(far * 100, frr * 100)
-    # plt.xlabel('false acceptance rate (%)')
-    # plt.ylabel('false rejection rate (%)')
-    # # plt.xlim(0, 100)
-    # # plt.ylim(0, 100)
-    # plt.show()
 
 
 def model_accuracy_figure(history):

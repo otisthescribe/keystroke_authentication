@@ -48,7 +48,7 @@ def read_data(filename="DSL-StrongPasswordData.csv"):
     """
 
     data51 = pd.read_csv(filename)
-    data51 = data51.drop(["sessionIndex", "rep"], axis=1)
+    data51 = data51.drop(["sessionIndex", "rep", "H.period"], axis=1)
 
     # Shuffle the data before splitting
     data51 = shuffle_datastet(data51)
@@ -73,13 +73,16 @@ def data_augmentation(train_dataset, eval_dataset):
     :param train_dataset: training DataFrame
     :return: None
     """
-    H = train_dataset.iloc[:, 1::3]
-    DD = train_dataset.iloc[:, 2::3]
-    B = train_dataset.iloc[:, 3::3]
+    DD = train_dataset.iloc[:, 1::3]
+    B = train_dataset.iloc[:, 2::3]
+    H = train_dataset.iloc[:, 3::3]
 
     HA = np.sort(np.concatenate(H.to_numpy(), axis=None))
     DDA = np.sort(np.concatenate(DD.to_numpy(), axis=None))
     BA = np.sort(np.concatenate(B.to_numpy(), axis=None))
+
+    generate_figures(HA, BA, DDA, "raw")
+    get_statistics(HA, BA, DDA)
 
     # Get rid of outlines
 
@@ -91,39 +94,39 @@ def data_augmentation(train_dataset, eval_dataset):
 
     for index, row in train_dataset.iterrows():
 
-        if max(row[1::3]) > max_hold:
+        if max(row[1::3]) > max_downdown:
             train_dataset.drop(index, inplace=True)
 
-        elif max(row[2::3]) > max_downdown:
+        elif max(row[2::3]) > max_between:
             train_dataset.drop(index, inplace=True)
 
-        elif max(row[3::3]) > max_between:
+        elif max(row[3::3]) > max_hold:
             train_dataset.drop(index, inplace=True)
 
     train_dataset.reset_index(inplace=True, drop=True)
 
     hold_scaler = StandardScaler()
-    hold_scaler.fit(train_dataset.iloc[:, 1::3].values.tolist())
+    hold_scaler.fit(train_dataset.iloc[:, 3::3].values.tolist())
     downdown_scaler = StandardScaler()
-    downdown_scaler.fit(train_dataset.iloc[:, 2::3].values.tolist())
+    downdown_scaler.fit(train_dataset.iloc[:, 1::3].values.tolist())
     between_scaler = StandardScaler()
-    between_scaler.fit(train_dataset.iloc[:, 3::3].values.tolist())
+    between_scaler.fit(train_dataset.iloc[:, 2::3].values.tolist())
 
-    new_data = hold_scaler.transform(train_dataset.iloc[:, 1::3].values.tolist())
-    train_dataset.iloc[:, 1::3] = pandas.DataFrame(new_data)
-    new_data = downdown_scaler.transform(train_dataset.iloc[:, 2::3].values.tolist())
-    train_dataset.iloc[:, 2::3] = pandas.DataFrame(new_data)
-    new_data = between_scaler.transform(train_dataset.iloc[:, 3::3].values.tolist())
+    new_data = hold_scaler.transform(train_dataset.iloc[:, 3::3].values.tolist())
     train_dataset.iloc[:, 3::3] = pandas.DataFrame(new_data)
+    new_data = downdown_scaler.transform(train_dataset.iloc[:, 1::3].values.tolist())
+    train_dataset.iloc[:, 1::3] = pandas.DataFrame(new_data)
+    new_data = between_scaler.transform(train_dataset.iloc[:, 2::3].values.tolist())
+    train_dataset.iloc[:, 2::3] = pandas.DataFrame(new_data)
 
     # STANDARDIZE THE EVALUATION SET WITH PARAMETERS FROM THE TRAINING SET
 
-    new_data = hold_scaler.transform(eval_dataset.iloc[:, 1::3].values.tolist())
-    eval_dataset.iloc[:, 1::3] = pandas.DataFrame(new_data)
-    new_data = downdown_scaler.transform(eval_dataset.iloc[:, 2::3].values.tolist())
-    eval_dataset.iloc[:, 2::3] = pandas.DataFrame(new_data)
-    new_data = between_scaler.transform(eval_dataset.iloc[:, 3::3].values.tolist())
+    new_data = hold_scaler.transform(eval_dataset.iloc[:, 3::3].values.tolist())
     eval_dataset.iloc[:, 3::3] = pandas.DataFrame(new_data)
+    new_data = downdown_scaler.transform(eval_dataset.iloc[:, 1::3].values.tolist())
+    eval_dataset.iloc[:, 1::3] = pandas.DataFrame(new_data)
+    new_data = between_scaler.transform(eval_dataset.iloc[:, 2::3].values.tolist())
+    eval_dataset.iloc[:, 2::3] = pandas.DataFrame(new_data)
 
     # SAVE THE SCALERS FOR FUTURE USE
 
@@ -161,11 +164,12 @@ def get_train_dict(train_dataset):
             users[user_count] = []
         keystrokes = row["combined"]
         keystrokes = [int(x * 1000) for x in keystrokes]
-        users[user_count].append(keystrokes)
+        chunk = np.array(keystrokes).reshape((10, 3))
+        users[user_count].append(chunk)
 
-        hold.append(keystrokes[::3])
-        downdown.append(keystrokes[1::3])
-        between.append(keystrokes[2::3])
+        hold.append(keystrokes[2::3])
+        downdown.append(keystrokes[::3])
+        between.append(keystrokes[1::3])
 
     hold = np.concatenate(np.array(hold), axis=None)
     downdown = np.concatenate(np.array(downdown), axis=None)
@@ -200,11 +204,12 @@ def get_eval_dict(eval_dataset):
 
         keystrokes = row["combined"]
         keystrokes = [int(x * 1000) for x in keystrokes]
-        eval_data[user_count].append(keystrokes)
+        chunk = np.array(keystrokes).reshape((10, 3))
+        eval_data[user_count].append(chunk)
 
-        hold.append(keystrokes[::3])
-        downdown.append(keystrokes[1::3])
-        between.append(keystrokes[2::3])
+        hold.append(keystrokes[2::3])
+        downdown.append(keystrokes[::3])
+        between.append(keystrokes[1::3])
 
     hold = np.concatenate(np.array(hold), axis=None)
     downdown = np.concatenate(np.array(downdown), axis=None)
@@ -229,6 +234,7 @@ def generate_figures(hold, between, downdown, suffix=""):
     plt.savefig("downdown_times_" + suffix + ".png")
     plt.show(block=False)
 
+    plt.figure()
     plt.hist(between, alpha=0.7, bins=50, color="blue")
     plt.xlabel("Between time")
     plt.savefig("between_times_" + suffix + ".png")
