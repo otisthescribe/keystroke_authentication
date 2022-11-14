@@ -121,6 +121,19 @@ def data_augmentation(train_dataset, eval_dataset):
 
     # STANDARDIZE THE EVALUATION SET WITH PARAMETERS FROM THE TRAINING SET
 
+    for index, row in eval_dataset.iterrows():
+
+        if max(row[1::3]) > max_downdown:
+            eval_dataset.drop(index, inplace=True)
+
+        elif max(row[2::3]) > max_between:
+            eval_dataset.drop(index, inplace=True)
+
+        elif max(row[3::3]) > max_hold:
+            eval_dataset.drop(index, inplace=True)
+
+    eval_dataset.reset_index(inplace=True, drop=True)
+
     new_data = hold_scaler.transform(eval_dataset.iloc[:, 3::3].values.tolist())
     eval_dataset.iloc[:, 3::3] = pandas.DataFrame(new_data)
     new_data = downdown_scaler.transform(eval_dataset.iloc[:, 1::3].values.tolist())
@@ -224,19 +237,19 @@ def get_eval_dict(eval_dataset):
 def generate_figures(hold, between, downdown, suffix=""):
     plt.figure()
     plt.hist(hold, alpha=0.7, bins=50, color="orange")
-    plt.xlabel("Hold time")
+    plt.xlabel("Hold time " + suffix)
     plt.savefig("hold_times_" + suffix + ".png")
     plt.show(block=False)
 
     plt.figure()
     plt.hist(downdown, alpha=0.7, bins=50, color="green")
-    plt.xlabel("Down down time")
+    plt.xlabel("Down down time " + suffix)
     plt.savefig("downdown_times_" + suffix + ".png")
     plt.show(block=False)
 
     plt.figure()
     plt.hist(between, alpha=0.7, bins=50, color="blue")
-    plt.xlabel("Between time")
+    plt.xlabel("Between time " + suffix)
     plt.savefig("between_times_" + suffix + ".png")
     plt.show(block=False)
 
