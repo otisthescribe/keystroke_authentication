@@ -9,38 +9,13 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from progress.bar import Bar
 
-TRAINING_USERS = 100
-EVALUATION_USERS = 10
-USERS = TRAINING_USERS + EVALUATION_USERS
+USERS = 21
 FILES_TO_READ = 4 * USERS
 PROBE_SIZE = 10
 MIN_SECTIONS = 15
 
 REMOVE_OUTLIERS = True
 DATA_AUGMENTATION = True
-DATA_SHUFFLE = False
-
-
-def shuffle_datastet(data):
-    for _ in range(USERS):
-        participants = data.groupby('PARTICIPANT_ID')
-        for participant_id, participant in participants:
-            sections = participant.groupby('SECTION_ID')
-            section_keys = list(sections.groups.keys())
-            for _ in range(MIN_SECTIONS):
-                sec1 = section_keys[random.randint(0, len(section_keys) - 1)]
-                sec2 = section_keys[random.randint(0, len(section_keys) - 1)]
-                temp = data.loc[data['PARTICIPANT_ID'] == sec1]
-                data.loc[data['PARTICIPANT_ID'] == sec1] = data.loc[data['PARTICIPANT_ID'] == sec2]
-                data.loc[data['PARTICIPANT_ID'] == sec2] = temp
-        keys = list(participants.groups.keys())
-        id1 = keys[random.randint(0, len(keys) - 1)]
-        id2 = keys[random.randint(0, len(keys) - 1)]
-        temp = data.loc[data['PARTICIPANT_ID'] == id1]
-        data.loc[data['PARTICIPANT_ID'] == id1] = data.loc[data['PARTICIPANT_ID'] == id2]
-        data.loc[data['PARTICIPANT_ID'] == id2] = temp
-
-    return data
 
 
 def divide_dataset(data):
@@ -50,12 +25,23 @@ def divide_dataset(data):
         print("There is not enough users in the dataset!")
         exit(0)
 
+    participants = sorted(participants, key=lambda x: len(x[1]), reverse=True)
+
     training = []
     evaluation = []
     for participants_id, participant in participants:
-        if len(training) < TRAINING_USERS:
+        if len(training) < 1:
             training.append(participant)
-        elif len(evaluation) < EVALUATION_USERS:
+        elif len(evaluation) < USERS - 1:
+            sections = participant.groupby('SECTION_ID')
+            k = 0
+            for section_id, section in sections:
+                if k == 0:
+                    print(section)
+                    training.append(section)
+                    k += 1
+                else:
+                    break
             evaluation.append(participant)
         else:
             break
@@ -219,12 +205,12 @@ def data_augmentation(data, hold_scaler=None, between_scaler=None, downdown_scal
 
 def main():
     directory = "./Keystrokes/files/"
-    files_list = os.listdir(directory)
-    random.shuffle(files_list)
+    list_of_files = filter(lambda x: os.path.isfile(os.path.join(directory, x)), os.listdir(directory))
+    list_of_files = sorted(list_of_files, key=lambda x: os.stat(os.path.join(directory, x)).st_size, reverse=True)
     data_list = []
     count_users = 0
     bar = Bar('Loading files', max=FILES_TO_READ)
-    for filename in files_list:
+    for filename in list_of_files:
         if count_users < FILES_TO_READ and re.search(r"\d+_keystrokes\.txt", filename) is not None:
             try:
                 file_path = "./Keystrokes/files/" + filename
@@ -267,10 +253,6 @@ def main():
         downdown = new_data["DOWNDOWN"].to_numpy()
         generate_figures(hold, between, downdown, suffix="outliers_removed")
         get_statistics(hold[~np.isnan(hold)], between[~np.isnan(between)], downdown[~np.isnan(downdown)], "OUTLIERS REMOVED")
-
-    # SHUFFLE USERS AND DATA
-    if DATA_SHUFFLE:
-        shuffle_datastet(new_data)
 
     # DIVIDE USERS INTO TRAINING AND EVALUATION
     train_dataset, eval_dataset = divide_dataset(new_data)

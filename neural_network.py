@@ -7,9 +7,8 @@ from keras.layers import Dense, Input, Flatten, BatchNormalization, LSTM, Bidire
 from keras.models import Sequential, load_model
 from keras.utils import to_categorical
 from keras.optimizers import RMSprop, Adam
-from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
-from new_data.data_preprocessing import TRAINING_USERS, PROBE_SIZE
+from new_data.data_preprocessing import USERS, PROBE_SIZE
 import sys
 
 INPUT_SIZE = (32, PROBE_SIZE)  # number of attributes - it will be the size of an input vector
@@ -54,24 +53,6 @@ def read_data():
     return train_data, eval_data
 
 
-def check_score(sample, template):
-    """
-    Checking the cosine similarity (which is a biometric score) between
-    template and sample vectors.
-
-    :param sample: First vector
-    :param template: Second vector
-    :return: Float value indicating biometric score
-    """
-
-    # Transforming vectors so they are in proper dimensions
-    a = np.expand_dims(sample, axis=0)
-    b = np.expand_dims(template, axis=0)
-    score = cosine_similarity(a, b)
-    # score is formatted as [[float]] so return just the value
-    return score[0][0]
-
-
 def prepare_data(train_data):
     """
     Prepare data for model training. Divide data into train and valid.
@@ -86,12 +67,17 @@ def prepare_data(train_data):
     for person_id in train_data.keys():
         for sample in train_data[person_id]:
             X.append(sample)
-            Y.append(person_id)
+            if person_id == 0:
+                print(len(train_data[person_id]))
+                Y.append(1)
+            else:
+                Y.append(0)
+    exit()
 
     X = np.array(X)
     Y = np.array(Y)
 
-    Y_oneshot = to_categorical(Y, num_classes=TRAINING_USERS)
+    Y_oneshot = to_categorical(Y, num_classes=2)
     X_train, X_valid, Y_train, Y_valid = train_test_split(X, Y_oneshot, test_size=0.2, random_state=123)
     return X, Y, X_train, X_valid, Y_train, Y_valid
 
@@ -108,123 +94,77 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     :return: model, central_vector, history data
     """
 
-    # model = Sequential()
-    # model.add(Input(shape=INPUT_SIZE))
-    # # model.add(Dense(units=TRAINING_USERS//4, activation="relu", kernel_regularizer='l2', input_shape=INPUT_SIZE))
-    # model.add(Dense(units=TRAINING_USERS//2, activation="relu", kernel_regularizer='l2', input_shape=INPUT_SIZE))
-    # model.add(Flatten())
-    # model.add(Dense(units=TRAINING_USERS, activation="softmax"))
-    #
-    # opt = keras.optimizers.Adam()
-    # model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
-    # model.summary()
-
     model = Sequential()
     model.add(Input(shape=INPUT_SIZE))
-    model.add(BatchNormalization())
-    forward_LSTM = LSTM(units=64, return_sequences=True)
-    backward_LSTM = LSTM(units=64, return_sequences=True, go_backwards=True)
-    model.add(Bidirectional(forward_LSTM, backward_layer=backward_LSTM, input_shape=INPUT_SIZE))
-    model.add(BatchNormalization())
     model.add(Flatten())
-    model.add(Dropout(0.3))
-    model.add(Dense(TRAINING_USERS, activation="softmax", kernel_regularizer='l2'))
-    select_optimizer = Adam()
-    model.compile(loss='categorical_crossentropy', optimizer=select_optimizer, metrics=['accuracy'])
+    model.add(Dense(units=INPUT_SIZE[0]//4, activation="relu", kernel_regularizer='l2', input_shape=INPUT_SIZE))
+    model.add(Dense(units=INPUT_SIZE[0]//2, activation="relu", kernel_regularizer='l2', input_shape=INPUT_SIZE))
+    model.add(Dense(units=2, activation="sigmoid"))
+
+    opt = keras.optimizers.Adam(learning_rate=0.001)
+    model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
     model.summary()
 
+    # model = Sequential()
+    # model.add(Input(shape=INPUT_SIZE))
+    # model.add(BatchNormalization())
+    # forward_LSTM = LSTM(units=32, return_sequences=False)
+    # backward_LSTM = LSTM(units=32, return_sequences=False, go_backwards=True)
+    # model.add(Bidirectional(forward_LSTM, backward_layer=backward_LSTM, input_shape=INPUT_SIZE))
+    # model.add(BatchNormalization())
+    # model.add(Flatten())
+    # # model.add(Dropout(0.3))
+    # model.add(Dense(2, activation="sigmoid"))
+
+    # select_optimizer = Adam(learning_rate=0.001)
+    # model.compile(loss='categorical_crossentropy', optimizer=select_optimizer, metrics=['accuracy'])
+    # model.summary()
+
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=256)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=64)
     vector_probes = model.predict(X)
     central_vector = np.mean(vector_probes, axis=0)
 
     return model, central_vector, history
 
 
-def enroll_users(model, eval_data, central_vector):
+def evaluate(model, eval_data, train_data, central_vector):
     """
     Create a biometric template for every user in a dictionary.
 
+    :param train_data: dictionary with user's training data
     :param model: neural network model
     :param eval_data: dictionary with user's evaluation data
     :param central_vector: array with vector from everyone's data
     :return: two dictionaries with enroll vector and test vectors for every user
     """
 
-    enroll = {}  # key = person_id ; value = template
-    test = {}  # key = person_id ; value = samples (1 or more)
+    TP = []
 
-    # CENTRAL VECTOR FROM EVAL DATA
-
-    # X = []
-    # for person_id in eval_data.keys():
-    #     for i in eval_data[person_id]:
-    #         X.append(i)
-    #
-    # vector_probes = model.predict(X)
-    # central_vector = np.mean(vector_probes, axis=0)
-
-    for person_id in eval_data.keys():
-
-        # Divide the dataset into enroll and test vectors for each user
-        # SEP samples for enroll and the rest for test
-        SEP = ENROLL_SIZE
-
-        # ENROLLMENT VECTOR
-        temp = eval_data[person_id][:SEP]
-        output = model.predict(np.array(temp))
-        out_vector = np.mean(output, axis=0)
-        enroll[person_id] = np.subtract(out_vector, central_vector)
-
-        # TEST VECTORS
-        test_vectors = []
-        temp = eval_data[person_id][SEP:]
+    for person_id in train_data.keys():
+        temp = train_data[person_id]
         output = model.predict(np.array(temp))
         for t in output:
-            test_vectors.append(np.subtract(t, central_vector))
-        test[person_id] = np.array(test_vectors)
+            TP.append(np.subtract(t, central_vector))
 
-    return enroll, test
+    print(TP)
 
+    TN = []
 
-def cross_evaluate(enroll, test):
-    """
-    Cross evaluate accuracy of biometric templates with the same user's test vectors
-    and with everyone else's test vectors.
+    for person_id in eval_data.keys():
+        temp = eval_data[person_id]
+        output = model.predict(np.array(temp))
+        for t in output:
+            TN.append(np.subtract(t, central_vector))
 
-    :param enroll: dictionary with enroll vectors
-    :param test: dictionary with test vectors
-    :return: two numpy arrays with true positives and true negatives
-    """
-
-    confidence_TP_MLP = []
-    confidence_TN_MLP = []
-    for userA in enroll.keys():
-        userA_model = enroll[userA]
-        A = []
-        B = []
-        # testing with the same user's test vectors
-        for t in test[userA]:
-            a = check_score(userA_model, t)
-            confidence_TP_MLP.append(a)
-            A.append(a)
-        # testing with other users' test vectors
-        for userB in test.keys():
-            if userB != userA:
-                for t in test[userB]:
-                    b = check_score(userA_model, t)
-                    confidence_TN_MLP.append(b)
-                    B.append(b)
-
-    confidence_TP_MLP = np.squeeze(np.array(confidence_TP_MLP))
-    confidence_TN_MLP = np.squeeze(np.array(confidence_TN_MLP))
+    print(TN)
 
     with open("./model/confidence_TP.pickle", 'wb') as file:
-        pickle.dump(confidence_TP_MLP, file)
+        pickle.dump(TP, file)
     with open("./model/confidence_TN.pickle", 'wb') as file:
-        pickle.dump(confidence_TN_MLP, file)
+        pickle.dump(TN, file)
 
-    return confidence_TP_MLP, confidence_TN_MLP
+    return TP, TN
 
 
 def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
@@ -360,8 +300,7 @@ def main():
     X, Y, X_train, X_valid, Y_train, Y_valid = prepare_data(train_data)
 
     model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid)
-    enroll, test = enroll_users(model, eval_data, central_vector)
-    conf_TP, conf_TN = cross_evaluate(enroll, test)
+    conf_TP, conf_TN = evaluate(model, eval_data, train_data, central_vector)
 
     confidence_figure(conf_TP, conf_TN)
     model_accuracy_figure(history)
