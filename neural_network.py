@@ -8,10 +8,10 @@ from keras.models import Sequential, load_model
 from keras.utils import to_categorical
 from keras.optimizers import RMSprop, Adam
 from sklearn.model_selection import train_test_split
-from new_data.data_preprocessing import USERS, PROBE_SIZE
+from new_data.data_preprocessing import USERS, PROBE_SIZE, get_data
 import sys
 
-INPUT_SIZE = (32, PROBE_SIZE)  # number of attributes - it will be the size of an input vector
+INPUT_SIZE = (PROBE_SIZE, 32)  # number of attributes - it will be the size of an input vector
 ENROLL_SIZE = 10
 
 np.set_printoptions(threshold=sys.maxsize)
@@ -44,63 +44,70 @@ def read_data():
     :return: train_data and eval_data dictionaries
     """
 
-    with open("./new_data/training_data.pickle", "rb") as file:
-        train_data = pickle.load(file)
+    with open("./new_data/training_original.pickle", "rb") as file:
+        training_original = pickle.load(file)
 
-    with open("./new_data/evaluation_data.pickle", "rb") as file:
-        eval_data = pickle.load(file)
+    with open("./new_data/testing_original.pickle", "rb") as file:
+        testing_original = pickle.load(file)
 
-    return train_data, eval_data
+    with open("./new_data/evaluation.pickle", "rb") as file:
+        evaluation = pickle.load(file)
 
-
-def prepare_data(train_data):
-    """
-    Prepare data for model training. Divide data into train and valid.
-
-    :param train_data: dictionary with training data
-    :return: tuple of six arrays
-    """
-
-    X = []
-    Y = []
-
-    # Get person_id of user with the most samples
-    m = 0
-    for person_id in train_data.keys():
-        if len(train_data[person_id]) > len(train_data[m]):
-            m = person_id
+    return training_original, testing_original, evaluation
 
 
+def prepare_data(train_org, test_org, evaluation):
 
-    for person_id in train_data.keys():
-        for sample in train_data[person_id]:
-            X.append(sample)
-            if person_id == m:
-                # Append 1 if sample is user m's sample
-                Y.append(1)
+    X_train = []
+    Y_train = []
+    X_valid = []
+    Y_valid = []
+    X_eval = []
+    Y_eval = []
+
+    for ind in train_org.keys():
+        for sample in train_org[ind]:
+            X_train.append(sample)
+            if ind == 0:
+                Y_train.append(0)
             else:
-                # Otherwise append 0 - not a user m's sample
-                Y.append(0)
+                Y_train.append(1)
 
-    X = np.array(X)
-    Y = np.array(Y)
+    for ind in test_org.keys():
+        for sample in test_org[ind]:
+            X_valid.append(sample)
+            if ind == 0:
+                Y_valid.append(0)
+            else:
+                Y_valid.append(1)
 
-    Y_oneshot = to_categorical(Y, num_classes=2)
-    X_train, X_valid, Y_train, Y_valid = train_test_split(X, Y_oneshot, test_size=0.2, random_state=123)
-    return X, Y, X_train, X_valid, Y_train, Y_valid
+    for ind in evaluation.keys():
+        for sample in evaluation[ind]:
+            X_eval.append(sample)
+            if ind == 0:
+                Y_eval.append(0)
+            else:
+                Y_eval.append(1)
+
+    X_train = np.array(X_train)
+    Y_train = np.array(Y_train)
+    X_valid = np.array(X_valid)
+    Y_valid = np.array(Y_valid)
+    X_eval = np.array(X_eval)
+    Y_eval = np.array(Y_eval)
+
+    Y_oneshot = to_categorical(Y_train, num_classes=2)
+    Y_oneshot2 = to_categorical(Y_valid, num_classes=2)
+    Y_oneshot3 = to_categorical(Y_eval, num_classes=2)
+
+    X_train, temp, Y_train, temp = train_test_split(X_train, Y_oneshot, test_size=1/len(X_train), random_state=123)
+    X_valid, temp, Y_valid, temp = train_test_split(X_valid, Y_oneshot2, test_size=1/len(X_valid), random_state=123)
+    X_eval, temp, Y_eval, temp = train_test_split(X_eval, Y_oneshot3, test_size=1/len(X_eval), random_state=123)
+
+    return X_train, Y_train, X_valid, Y_valid, X_eval, Y_eval
 
 
-def create_model(X, X_train, X_valid, Y_train, Y_valid):
-    """
-    Create keras model from training data and evaluate it using valid data.
-
-    :param X: array with everyone's data in one block
-    :param X_train: array with training data
-    :param X_valid: array with valid data
-    :param Y_train: array for output of training data (from model)
-    :param Y_valid: array for output of valid data (from model)
-    :return: model, central_vector, history data
-    """
+def create_model(X_train, Y_train, X_valid, Y_valid):
     #
     # model = Sequential()
     # model.add(Input(shape=INPUT_SIZE))
@@ -116,62 +123,44 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     model = Sequential()
     model.add(Input(shape=INPUT_SIZE))
     model.add(BatchNormalization())
-    forward_LSTM = LSTM(units=32, return_sequences=False)
-    backward_LSTM = LSTM(units=32, return_sequences=False, go_backwards=True)
+    forward_LSTM = LSTM(units=32, return_sequences=True)
+    backward_LSTM = LSTM(units=32, return_sequences=True, go_backwards=True)
     model.add(Bidirectional(forward_LSTM, backward_layer=backward_LSTM, input_shape=INPUT_SIZE))
     model.add(BatchNormalization())
     model.add(Flatten())
-    model.add(Dropout(0.3))
-    model.add(Dense(2, activation="sigmoid"))
+    model.add(Dropout(0.2))
+    model.add(Dense(2, activation="softmax"))
 
     select_optimizer = Adam(learning_rate=0.0001)
     model.compile(loss='categorical_crossentropy', optimizer=select_optimizer, metrics=['accuracy'])
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=64)
-    vector_probes = model.predict(X)
-    central_vector = np.mean(vector_probes, axis=0)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=128)
 
-    return model, central_vector, history
+    return model, history
 
 
-def evaluate(model, eval_data, train_data, central_vector):
-    """
-    Create a biometric template for every user in a dictionary.
+def evaluate(model, X_eval, Y_eval):
 
-    :param train_data: dictionary with user's training data
-    :param model: neural network model
-    :param eval_data: dictionary with user's evaluation data
-    :param central_vector: array with vector from everyone's data
-    :return: two dictionaries with enroll vector and test vectors for every user
-    """
+    print(model.evaluate(X_eval, Y_eval, batch_size=50))
 
+    output = model.predict(X_eval)
+
+    print(len(output))
     TP = []
-    res1 = []
-
-    for person_id in train_data.keys():
-        temp = train_data[person_id]
-        output = model.predict(np.array(temp))
-        for t in output:
-            res1.append(t)
-            TP.append(t[0])
-
-    # print(TP)
-
     TN = []
-    res2 = []
+    for i in range(len(output)):
+        if Y_eval[i][1] == 1:
+            TP.append(output[i][1])
 
-    for person_id in eval_data.keys():
-        temp = eval_data[person_id]
-        output = model.predict(np.array(temp))
-        for t in output:
-            res2.append(t)
-            TN.append(t[0])
+        if Y_eval[i][0] == 0:
+            TN.append(output[i][0])
 
-    # print(res1)
-    print("ANOTHER")
-    print(res2)
+        print(Y_eval[i][0], ": ", output[i][0], "; ", Y_eval[i][1], ": ", output[i][1])
+
+    print(TN)
+    print(TP)
 
     with open("./model/confidence_TP.pickle", 'wb') as file:
         pickle.dump(TP, file)
@@ -310,16 +299,15 @@ def main():
     Model and a central vector are saved to ./model folder.
     """
 
-    train_data, eval_data = read_data()
-    X, Y, X_train, X_valid, Y_train, Y_valid = prepare_data(train_data)
+    train_org, test_org, evaluation = read_data()
+    X_train, Y_train, X_valid, Y_valid, X_eval, Y_eval = prepare_data(train_org, test_org, evaluation)
 
-    model, central_vector, history = create_model(X, X_train, X_valid, Y_train, Y_valid)
-    conf_TP, conf_TN = evaluate(model, eval_data, train_data, central_vector)
+    model, history = create_model(X_train, Y_train, X_valid, Y_valid)
+    conf_TP, conf_TN = evaluate(model, X_eval, Y_eval)
 
     confidence_figure(conf_TP, conf_TN)
     model_accuracy_figure(history)
     save_model(model)
-    save_central_vector(central_vector)
 
 
 if __name__ == "__main__":
