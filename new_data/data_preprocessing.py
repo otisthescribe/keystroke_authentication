@@ -37,7 +37,6 @@ def divide_dataset(data):
             k = 0
             for section_id, section in sections:
                 if k == 0:
-                    print(section)
                     training.append(section)
                     k += 1
                 else:
@@ -196,6 +195,7 @@ def data_augmentation(data, hold_scaler=None, between_scaler=None, downdown_scal
     new_data = hold_scaler.transform(np.asarray(data["HOLD"]).reshape(-1, 1))
     data["HOLD"] = pd.DataFrame(new_data)
     new_data = downdown_scaler.transform(np.asarray(data["DOWNDOWN"]).reshape(-1, 1))
+    print(np.mean(new_data))
     data["DOWNDOWN"] = pd.DataFrame(new_data)
     new_data = between_scaler.transform(np.asarray(data["BETWEEN"]).reshape(-1, 1))
     data["BETWEEN"] = pd.DataFrame(new_data)

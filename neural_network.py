@@ -64,15 +64,23 @@ def prepare_data(train_data):
     X = []
     Y = []
 
+    # Get person_id of user with the most samples
+    m = 0
+    for person_id in train_data.keys():
+        if len(train_data[person_id]) > len(train_data[m]):
+            m = person_id
+
+
+
     for person_id in train_data.keys():
         for sample in train_data[person_id]:
             X.append(sample)
-            if person_id == 0:
-                print(len(train_data[person_id]))
+            if person_id == m:
+                # Append 1 if sample is user m's sample
                 Y.append(1)
             else:
+                # Otherwise append 0 - not a user m's sample
                 Y.append(0)
-    exit()
 
     X = np.array(X)
     Y = np.array(Y)
@@ -93,32 +101,32 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     :param Y_valid: array for output of valid data (from model)
     :return: model, central_vector, history data
     """
+    #
+    # model = Sequential()
+    # model.add(Input(shape=INPUT_SIZE))
+    # model.add(Flatten())
+    # model.add(Dense(units=INPUT_SIZE[0]//4, activation="relu", kernel_regularizer='l2', input_shape=INPUT_SIZE))
+    # model.add(Dense(units=INPUT_SIZE[0]//2, activation="relu", kernel_regularizer='l2', input_shape=INPUT_SIZE))
+    # model.add(Dense(units=2, activation="sigmoid"))
+    #
+    # opt = keras.optimizers.Adam(learning_rate=0.001)
+    # model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+    # model.summary()
 
     model = Sequential()
     model.add(Input(shape=INPUT_SIZE))
+    model.add(BatchNormalization())
+    forward_LSTM = LSTM(units=32, return_sequences=False)
+    backward_LSTM = LSTM(units=32, return_sequences=False, go_backwards=True)
+    model.add(Bidirectional(forward_LSTM, backward_layer=backward_LSTM, input_shape=INPUT_SIZE))
+    model.add(BatchNormalization())
     model.add(Flatten())
-    model.add(Dense(units=INPUT_SIZE[0]//4, activation="relu", kernel_regularizer='l2', input_shape=INPUT_SIZE))
-    model.add(Dense(units=INPUT_SIZE[0]//2, activation="relu", kernel_regularizer='l2', input_shape=INPUT_SIZE))
-    model.add(Dense(units=2, activation="sigmoid"))
+    model.add(Dropout(0.3))
+    model.add(Dense(2, activation="sigmoid"))
 
-    opt = keras.optimizers.Adam(learning_rate=0.001)
-    model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+    select_optimizer = Adam(learning_rate=0.0001)
+    model.compile(loss='categorical_crossentropy', optimizer=select_optimizer, metrics=['accuracy'])
     model.summary()
-
-    # model = Sequential()
-    # model.add(Input(shape=INPUT_SIZE))
-    # model.add(BatchNormalization())
-    # forward_LSTM = LSTM(units=32, return_sequences=False)
-    # backward_LSTM = LSTM(units=32, return_sequences=False, go_backwards=True)
-    # model.add(Bidirectional(forward_LSTM, backward_layer=backward_LSTM, input_shape=INPUT_SIZE))
-    # model.add(BatchNormalization())
-    # model.add(Flatten())
-    # # model.add(Dropout(0.3))
-    # model.add(Dense(2, activation="sigmoid"))
-
-    # select_optimizer = Adam(learning_rate=0.001)
-    # model.compile(loss='categorical_crossentropy', optimizer=select_optimizer, metrics=['accuracy'])
-    # model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
     history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=64)
@@ -140,24 +148,30 @@ def evaluate(model, eval_data, train_data, central_vector):
     """
 
     TP = []
+    res1 = []
 
     for person_id in train_data.keys():
         temp = train_data[person_id]
         output = model.predict(np.array(temp))
         for t in output:
-            TP.append(np.subtract(t, central_vector))
+            res1.append(t)
+            TP.append(t[0])
 
-    print(TP)
+    # print(TP)
 
     TN = []
+    res2 = []
 
     for person_id in eval_data.keys():
         temp = eval_data[person_id]
         output = model.predict(np.array(temp))
         for t in output:
-            TN.append(np.subtract(t, central_vector))
+            res2.append(t)
+            TN.append(t[0])
 
-    print(TN)
+    # print(res1)
+    print("ANOTHER")
+    print(res2)
 
     with open("./model/confidence_TP.pickle", 'wb') as file:
         pickle.dump(TP, file)
