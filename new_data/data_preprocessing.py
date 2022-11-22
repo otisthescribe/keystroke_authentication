@@ -50,7 +50,7 @@ def divide_dataset(data):
             user_count += 1
         elif user_count < USERS // 2:
             # TRAIN i VALID
-            SEP = int(len(participant) * (4/5))
+            SEP = int(len(participant) * (7/10))
             user_data = get_user_data(participant)[0]
             training_temp.append(user_data[:SEP])
             testing_temp.append(user_data[SEP:])
@@ -75,11 +75,15 @@ def divide_dataset(data):
     for i in range(len(training_temp)):
         random.shuffle(training_temp[i])
         for j in range(SEP1):
+            if j == len(training_temp[i]):
+                break
             training_original[0].append(training_temp[i][j])
 
     for i in range(len(testing_temp)):
         random.shuffle(testing_temp[i])
         for j in range(SEP2):
+            if j == len(testing_temp[i]):
+                break
             testing_original[0].append(testing_temp[i][j])
 
     EVAL_SEP = int(test_num / len(evaluation_temp)) + 1
@@ -170,6 +174,7 @@ def get_user_data(data):
         group.drop(['KEYCODE'], inplace=True, axis=1)
         output = pd.concat([group.reset_index(drop=True), keycodes.reset_index(drop=True)], axis=1, ignore_index=True)
 
+        # transposed = group.T
         transposed = output.T
 
         for i in range(len(group) - PROBE_SIZE):

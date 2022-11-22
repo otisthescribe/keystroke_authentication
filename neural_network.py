@@ -12,7 +12,6 @@ from new_data.data_preprocessing import USERS, PROBE_SIZE, get_data
 import sys
 
 INPUT_SIZE = (PROBE_SIZE, 32)  # number of attributes - it will be the size of an input vector
-ENROLL_SIZE = 10
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -57,6 +56,13 @@ def read_data():
 
 
 def prepare_data(train_org, test_org, evaluation):
+
+    # print(len(train_org[0]))
+    # print(len(train_org[1]))
+    # print(len(test_org[0]))
+    # print(len(test_org[1]))
+
+    # exit()
 
     X_train = []
     Y_train = []
@@ -107,7 +113,7 @@ def prepare_data(train_org, test_org, evaluation):
     return X_train, Y_train, X_valid, Y_valid, X_eval, Y_eval
 
 
-def create_model(X_train, Y_train, X_valid, Y_valid):
+def create_model(X_train, Y_train, X_valid, Y_valid, X_eval, Y_eval):
     #
     # model = Sequential()
     # model.add(Input(shape=INPUT_SIZE))
@@ -136,7 +142,7 @@ def create_model(X_train, Y_train, X_valid, Y_valid):
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=128)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=64, batch_size=128)
 
     return model, history
 
@@ -154,8 +160,8 @@ def evaluate(model, X_eval, Y_eval):
         if Y_eval[i][1] == 1:
             TP.append(output[i][1])
 
-        if Y_eval[i][0] == 0:
-            TN.append(output[i][0])
+        if Y_eval[i][0] == 1:
+            TN.append(output[i][1])
 
         print(Y_eval[i][0], ": ", output[i][0], "; ", Y_eval[i][1], ": ", output[i][1])
 
@@ -183,7 +189,7 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
     n_TP, bins_TP, patches_TP = plt.hist(confidence_TP_MLP, alpha=1, bins=100)
     n_TN, bins_TN, patches_TN = plt.hist(confidence_TN_MLP, alpha=0.5, bins=100)
     plt.legend(["score True Positive", "score True Negative"])
-    plt.xlim([-1, 1])
+    plt.xlim([-0.1, 1.1])
     plt.xlabel("score")
     plt.grid()
     plt.savefig("./plots/confidence_TP_TN.png")
@@ -302,7 +308,7 @@ def main():
     train_org, test_org, evaluation = read_data()
     X_train, Y_train, X_valid, Y_valid, X_eval, Y_eval = prepare_data(train_org, test_org, evaluation)
 
-    model, history = create_model(X_train, Y_train, X_valid, Y_valid)
+    model, history = create_model(X_train, Y_train, X_valid, Y_valid, X_eval, Y_eval)
     conf_TP, conf_TN = evaluate(model, X_eval, Y_eval)
 
     confidence_figure(conf_TP, conf_TN)
