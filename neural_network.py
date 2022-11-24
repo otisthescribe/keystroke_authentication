@@ -114,13 +114,15 @@ def prepare_data(train_org, test_org, evaluation):
 
 
 def create_model(X_train, Y_train, X_valid, Y_valid, X_eval, Y_eval):
-    #
+    # flat = INPUT_SIZE[0] * INPUT_SIZE[1]
     # model = Sequential()
     # model.add(Input(shape=INPUT_SIZE))
     # model.add(Flatten())
-    # model.add(Dense(units=INPUT_SIZE[0]//4, activation="relu", kernel_regularizer='l2', input_shape=INPUT_SIZE))
-    # model.add(Dense(units=INPUT_SIZE[0]//2, activation="relu", kernel_regularizer='l2', input_shape=INPUT_SIZE))
-    # model.add(Dense(units=2, activation="sigmoid"))
+    # model.add(Dense(units=flat, activation="relu", input_shape=INPUT_SIZE))
+    # model.add(Dense(units=flat // 2, activation="relu", input_shape=INPUT_SIZE))
+    # model.add(Dense(units=flat // 3, activation="relu", input_shape=INPUT_SIZE))
+    # model.add(Dense(units=flat // 4, activation="relu", input_shape=INPUT_SIZE))
+    # model.add(Dense(units=2, activation="softmax"))
     #
     # opt = keras.optimizers.Adam(learning_rate=0.001)
     # model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
@@ -142,7 +144,7 @@ def create_model(X_train, Y_train, X_valid, Y_valid, X_eval, Y_eval):
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=64, batch_size=128)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=64)
 
     return model, history
 
@@ -163,10 +165,10 @@ def evaluate(model, X_eval, Y_eval):
         if Y_eval[i][0] == 1:
             TN.append(output[i][1])
 
-        print(Y_eval[i][0], ": ", output[i][0], "; ", Y_eval[i][1], ": ", output[i][1])
+        # print(Y_eval[i][0], ": ", output[i][0], "; ", Y_eval[i][1], ": ", output[i][1])
 
-    print(TN)
-    print(TP)
+    print(f"True Negative scores: (max: {max(TN)}) {TN}")
+    print(f"True Positive scores: (min: {min(TP)}) {TP}")
 
     with open("./model/confidence_TP.pickle", 'wb') as file:
         pickle.dump(TP, file)

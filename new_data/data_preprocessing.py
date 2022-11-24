@@ -14,8 +14,8 @@ FILES_TO_READ = 4 * USERS
 PROBE_SIZE = 10
 MIN_SECTIONS = 15
 
-REMOVE_OUTLIERS = False
-DATA_AUGMENTATION = False
+REMOVE_OUTLIERS = True
+DATA_AUGMENTATION = True
 
 
 def divide_dataset(data):
@@ -130,18 +130,10 @@ def get_statistics(hold, between, downdown, title="DATA PARAMETERS"):
 
 
 def ascii_encoding(keycodes):
-    # onehot[0] -> a
-    # onehot[1] -> b
-    # ....
-    # onehot[25] -> z
+    # onehot[0-25] -> a-z
     # onehot[26] -> SPACE
     # onehot[27] -> SHIFT
     # onehot[28] -> others
-
-    # ASCII A - Z => 65 -> 90
-    # SPACE => 32
-    # SHIFT => 16
-
     onehot = [[0 for _ in range(29)] for _ in range(len(keycodes))]
     for i in range(len(keycodes)):
         key = keycodes[i]
@@ -242,7 +234,6 @@ def data_augmentation(data, hold_scaler=None, between_scaler=None, downdown_scal
     new_data = hold_scaler.transform(np.asarray(data["HOLD"]).reshape(-1, 1))
     data["HOLD"] = pd.DataFrame(new_data)
     new_data = downdown_scaler.transform(np.asarray(data["DOWNDOWN"]).reshape(-1, 1))
-    print(np.mean(new_data))
     data["DOWNDOWN"] = pd.DataFrame(new_data)
     new_data = between_scaler.transform(np.asarray(data["BETWEEN"]).reshape(-1, 1))
     data["BETWEEN"] = pd.DataFrame(new_data)
@@ -301,8 +292,17 @@ def main():
         generate_figures(hold, between, downdown, suffix="outliers_removed")
         get_statistics(hold[~np.isnan(hold)], between[~np.isnan(between)], downdown[~np.isnan(downdown)], "OUTLIERS REMOVED")
 
-    # DIVIDE USERS INTO TRAINING AND EVALUATION
-    # train_dataset, eval_dataset = divide_dataset(new_data)
+    # STANDARDIZE THE DATA
+    if DATA_AUGMENTATION:
+        print("Data augmentation...")
+        new_data, hold_scaler, between_scaler, downdown_scaler = data_augmentation(new_data)
+        hold = new_data["HOLD"].to_numpy()
+        between = new_data["BETWEEN"].to_numpy()
+        downdown = new_data["DOWNDOWN"].to_numpy()
+        generate_figures(hold, between, downdown, suffix="augmentation")
+        get_statistics(hold[~np.isnan(hold)], between[~np.isnan(between)], downdown[~np.isnan(downdown)], "AUGMENTATION")
+
+    # DIVIDE USERS INTO TRAINING, TESTING AND EVALUATION
     train_org, test_org, evaluation = divide_dataset(new_data)
 
     with open("training_original.pickle", "wb") as fd:
@@ -315,71 +315,6 @@ def main():
         pickle.dump(evaluation, fd)
 
     return train_org, test_org, evaluation
-
-
-    # # STANDARDIZE THE DATA
-    # if DATA_AUGMENTATION:
-    #     print("Data augmentation...")
-    #     train_dataset, hold_scaler, between_scaler, downdown_scaler = data_augmentation(train_dataset)
-    #     eval_dataset = data_augmentation(eval_dataset, hold_scaler, between_scaler, downdown_scaler)[0]
-    #     with open("./hold_scaler.pickle", 'wb') as fd:
-    #         pickle.dump(hold_scaler, fd)
-    #     with open("./between_scaler.pickle", 'wb') as fd:
-    #         pickle.dump(between_scaler, fd)
-    #     with open("./downdown_scaler.pickle", 'wb') as fd:
-    #         pickle.dump(downdown_scaler, fd)
-
-    # training_users = {}
-    #
-    # # CREATE SAMPLES FOR EACH USER IN TRAINING
-    # HOLD = np.array([])
-    # BETWEEN = np.array([])
-    # DOWNDOWN = np.array([])
-    # participants = train_dataset.groupby('PARTICIPANT_ID')
-    # training_users_count = 0
-    # bar = Bar('Get data (training)', max=len(list(participants.groups.keys())))
-    # for participant_id, participant in participants:
-    #     result, hold, between, downdown = get_user_data(participant)
-    #     training_users[training_users_count] = result
-    #     training_users_count += 1
-    #     HOLD = np.append(HOLD, hold)
-    #     BETWEEN = np.append(BETWEEN, between)
-    #     DOWNDOWN = np.append(DOWNDOWN, downdown)
-    #     bar.next()
-    #
-    # bar.finish()
-    #
-    # generate_figures(HOLD[~np.isnan(HOLD)], BETWEEN[~np.isnan(BETWEEN)], DOWNDOWN[~np.isnan(DOWNDOWN)], suffix="training")
-    # get_statistics(HOLD[~np.isnan(HOLD)], BETWEEN[~np.isnan(BETWEEN)], DOWNDOWN[~np.isnan(DOWNDOWN)], "TRAINING")
-    #
-    # with open("training_data.pickle", "wb") as fd:
-    #     pickle.dump(training_users, fd)
-    #
-    # evaluation_users = {}
-    #
-    # # CREATE SAMPLES FOR EACH USER IN EVALUATION
-    # HOLD = np.array([])
-    # BETWEEN = np.array([])
-    # DOWNDOWN = np.array([])
-    # participants = eval_dataset.groupby('PARTICIPANT_ID')
-    # evaluation_users_count = 0
-    # bar = Bar('Get data (evaluation)', max=len(list(participants.groups.keys())))
-    # for participant_id, participant in participants:
-    #     result, hold, between, downdown = get_user_data(participant)
-    #     evaluation_users[evaluation_users_count] = result
-    #     evaluation_users_count += 1
-    #     HOLD = np.append(HOLD, hold)
-    #     BETWEEN = np.append(BETWEEN, between)
-    #     DOWNDOWN = np.append(DOWNDOWN, downdown)
-    #     bar.next()
-    #
-    # bar.finish()
-
-    # generate_figures(HOLD[~np.isnan(HOLD)], BETWEEN[~np.isnan(BETWEEN)], DOWNDOWN[~np.isnan(DOWNDOWN)], suffix="evaluation")
-    # get_statistics(HOLD[~np.isnan(HOLD)], BETWEEN[~np.isnan(BETWEEN)], DOWNDOWN[~np.isnan(DOWNDOWN)], "EVALUATION")
-    #
-    # with open("evaluation_data.pickle", "wb") as fd:
-    #     pickle.dump(evaluation_users, fd)
 
 
 def get_data():
