@@ -9,11 +9,11 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from progress.bar import Bar
 
-TRAINING_USERS = 100
-EVALUATION_USERS = 10
+TRAINING_USERS = 300
+EVALUATION_USERS = 20
 USERS = TRAINING_USERS + EVALUATION_USERS
 FILES_TO_READ = 4 * USERS
-PROBE_SIZE = 10
+PROBE_SIZE = 40
 MIN_SECTIONS = 15
 
 REMOVE_OUTLIERS = True
@@ -65,23 +65,31 @@ def divide_dataset(data):
     return train_dataset, eval_dataset
 
 
-def generate_figures(hold, between, downdown, suffix=""):
-    plt.figure()
-    plt.hist(hold, alpha=0.7, bins=50, color="orange")
-    plt.xlabel("Hold time " + suffix)
-    plt.savefig("hold_times_" + suffix + ".png")
-    plt.show(block=False)
+def generate_figures(hold, between, downdown, x_name="Czas [s]", y_name="Liczba wystąpień", suffix=""):
 
-    plt.figure()
-    plt.hist(downdown, alpha=0.7, bins=50, color="green")
-    plt.xlabel("Down down time " + suffix)
-    plt.savefig("downdown_times_" + suffix + ".png")
-    plt.show(block=False)
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 5))
+    fig.tight_layout(pad=5.0)
+    fig.suptitle('Rozkład cech w bazie danych Dhakal', fontsize=16)
 
-    plt.figure()
-    plt.hist(between, alpha=0.7, bins=50, color="blue")
-    plt.xlabel("Between time " + suffix)
-    plt.savefig("between_times_" + suffix + ".png")
+    ax1.plot()
+    ax1.set(xlabel=f"H - {x_name}", ylabel=y_name, title="Rozkład czasów H")
+    ax1.hist(hold, alpha=0.7, bins=100, color="orange")
+    # fig.savefig("hold_times_" + suffix + ".png")
+    # plt.show(block=False)
+
+    ax2.plot()
+    ax2.set(xlabel=f"DD - {x_name}", ylabel=y_name, title="Rozkład czasów DD")
+    ax2.hist(downdown, alpha=0.7, bins=100, color="green")
+    # plt.savefig("downdown_times_" + suffix + ".png")
+    # plt.show(block=False)
+
+    ax3.plot()
+    ax3.set(xlabel=f"UD - {x_name}", ylabel=y_name, title="Rozkład czasów UD")
+    ax3.hist(between, alpha=0.7, bins=100, color="blue")
+    # plt.savefig("between_times_" + suffix + ".png")
+    # plt.show(block=False)
+
+    fig.savefig(suffix + ".png")
     plt.show(block=False)
 
 
@@ -114,7 +122,7 @@ def ascii_encoding(keycodes):
 
     onehot = [[0 for _ in range(29)] for _ in range(len(keycodes))]
     for i in range(len(keycodes)):
-        key = keycodes[i]
+        key = int(keycodes[i])
         if 65 <= key <= 90:
             onehot[i][key - 65] = 1
         elif key == 32:
@@ -252,8 +260,9 @@ def main():
     hold = new_data["HOLD"].to_numpy()
     between = new_data["BETWEEN"].to_numpy()
     downdown = new_data["DOWNDOWN"].to_numpy()
-    generate_figures(hold, between, downdown, suffix="raw")
+    generate_figures(hold, between, downdown, x_name="Czas [ms]", y_name="Liczba wystąpień", suffix="dhakal_raw_50")
     get_statistics(hold[~np.isnan(hold)], between[~np.isnan(between)], downdown[~np.isnan(downdown)], "RAW")
+
     # REMOVE OUTLIERS
     if REMOVE_OUTLIERS:
         new_data, user_count = remove_outliers(new_data)
@@ -265,7 +274,7 @@ def main():
         hold = new_data["HOLD"].to_numpy()
         between = new_data["BETWEEN"].to_numpy()
         downdown = new_data["DOWNDOWN"].to_numpy()
-        generate_figures(hold, between, downdown, suffix="outliers_removed")
+        generate_figures(hold, between, downdown, x_name="Czas [ms]", y_name="Liczba wystąpień", suffix="dhakal_outliers_removed_300")
         get_statistics(hold[~np.isnan(hold)], between[~np.isnan(between)], downdown[~np.isnan(downdown)], "OUTLIERS REMOVED")
 
     # SHUFFLE USERS AND DATA
@@ -280,6 +289,15 @@ def main():
         print("Data augmentation...")
         train_dataset, hold_scaler, between_scaler, downdown_scaler = data_augmentation(train_dataset)
         eval_dataset = data_augmentation(eval_dataset, hold_scaler, between_scaler, downdown_scaler)[0]
+
+        hold = train_dataset["HOLD"].to_numpy()
+        between = train_dataset["BETWEEN"].to_numpy()
+        downdown = train_dataset["DOWNDOWN"].to_numpy()
+        generate_figures(hold, between, downdown, x_name="po standaryzacji", y_name="Liczba wystąpień",
+                         suffix="dhakal_standardized-50")
+        get_statistics(hold[~np.isnan(hold)], between[~np.isnan(between)], downdown[~np.isnan(downdown)],
+                       "OUTLIERS REMOVED")
+
         with open("./hold_scaler.pickle", 'wb') as fd:
             pickle.dump(hold_scaler, fd)
         with open("./between_scaler.pickle", 'wb') as fd:

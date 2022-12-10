@@ -50,42 +50,35 @@ def read_data(filename="DSL-StrongPasswordData.csv"):
     data51 = pd.read_csv(filename)
     data51 = data51.drop(["sessionIndex", "rep"], axis=1)
 
-    # Shuffle the data before splitting
-    data51 = shuffle_datastet(data51)
+    # RAW DATA FIGURES
+
+    H = data51.iloc[:, 1::3]
+    DD = data51.iloc[:, 2::3]
+    B = data51.iloc[:, 3::3]
+
+    hold = np.concatenate(np.array(H), axis=None)
+    downdown = np.concatenate(np.array(DD), axis=None)
+    between = np.concatenate(np.array(B), axis=None)
+
+    generate_figures(hold, between, downdown, x_name="Czas [s]", y_name="Liczba wystąpień", suffix="killourhy_raw")
+    get_statistics(hold, between, downdown)
+
+    # Divide before deleting
 
     train_dataset = data51.iloc[:USERS * 400, :].copy(deep=True)
     train_dataset.reset_index(inplace=True, drop=True)
     eval_dataset = data51.iloc[USERS * 400:, :].copy(deep=True)
     eval_dataset.reset_index(inplace=True, drop=True)
 
-    del data51
-
-    return train_dataset, eval_dataset
-
-
-def data_augmentation(train_dataset, eval_dataset):
-    """
-    Remove the records containg outlines.
-    Standardize data using StandardScaler to make
-    a mean and variance exual 0.
-    Perform it only on the training data.
-    :param eval_dataset: evaluation DataFrame
-    :param train_dataset: training DataFrame
-    :return: None
-    """
-    H = train_dataset.iloc[:, 1::3]
-    DD = train_dataset.iloc[:, 2::3]
-    B = train_dataset.iloc[:, 3::3]
+    # Get rid of outlines
 
     HA = np.sort(np.concatenate(H.to_numpy(), axis=None))
     DDA = np.sort(np.concatenate(DD.to_numpy(), axis=None))
     BA = np.sort(np.concatenate(B.to_numpy(), axis=None))
 
-    # Get rid of outlines
-
-    max_hold = HA[int(len(HA) * 0.99)]
-    max_downdown = DDA[int(len(DDA) * 0.99)]
-    max_between = BA[int(len(BA) * 0.99)]
+    max_hold = HA[int(len(HA) * 0.999)]
+    max_downdown = DDA[int(len(DDA) * 0.999)]
+    max_between = BA[int(len(BA) * 0.999)]
 
     # Go through the DataFrame and drop those rows that have some values greater that max
 
@@ -102,6 +95,48 @@ def data_augmentation(train_dataset, eval_dataset):
 
     train_dataset.reset_index(inplace=True, drop=True)
 
+    for index, row in eval_dataset.iterrows():
+
+        if max(row[1::3]) > max_hold:
+            eval_dataset.drop(index, inplace=True)
+
+        elif max(row[2::3]) > max_downdown:
+            eval_dataset.drop(index, inplace=True)
+
+        elif max(row[3::3]) > max_between:
+            eval_dataset.drop(index, inplace=True)
+
+    eval_dataset.reset_index(inplace=True, drop=True)
+
+    data51 = pd.concat([train_dataset, eval_dataset], ignore_index=True)
+
+    H = data51.iloc[:, 1::3]
+    DD = data51.iloc[:, 2::3]
+    B = data51.iloc[:, 3::3]
+
+    hold = np.concatenate(np.array(H), axis=None)
+    downdown = np.concatenate(np.array(DD), axis=None)
+    between = np.concatenate(np.array(B), axis=None)
+
+    generate_figures(hold, between, downdown, x_name="Czas [s]", y_name="Liczba wystąpień", suffix="killourhy_outliers_removed")
+    get_statistics(hold, between, downdown)
+
+    del data51
+
+    return train_dataset, eval_dataset
+
+
+def data_augmentation(train_dataset, eval_dataset):
+    """
+    Remove the records containg outlines.
+    Standardize data using StandardScaler to make
+    a mean and variance exual 0.
+    Perform it only on the training data.
+    :param eval_dataset: evaluation DataFrame
+    :param train_dataset: training DataFrame
+    :return: None
+    """
+
     hold_scaler = StandardScaler()
     hold_scaler.fit(train_dataset.iloc[:, 1::3].values.tolist())
     downdown_scaler = StandardScaler()
@@ -116,6 +151,18 @@ def data_augmentation(train_dataset, eval_dataset):
     new_data = between_scaler.transform(train_dataset.iloc[:, 3::3].values.tolist())
     train_dataset.iloc[:, 3::3] = pandas.DataFrame(new_data)
 
+    H = train_dataset.iloc[:, 1::3]
+    DD = train_dataset.iloc[:, 2::3]
+    B = train_dataset.iloc[:, 3::3]
+
+    hold = np.concatenate(np.array(H), axis=None)
+    downdown = np.concatenate(np.array(DD), axis=None)
+    between = np.concatenate(np.array(B), axis=None)
+
+    generate_figures(hold, between, downdown, x_name="po standaryzacji", y_name="Liczba wystąpień",
+                     suffix="killourhy_standarization_training")
+    get_statistics(hold, between, downdown)
+
     # STANDARDIZE THE EVALUATION SET WITH PARAMETERS FROM THE TRAINING SET
 
     new_data = hold_scaler.transform(eval_dataset.iloc[:, 1::3].values.tolist())
@@ -124,6 +171,18 @@ def data_augmentation(train_dataset, eval_dataset):
     eval_dataset.iloc[:, 2::3] = pandas.DataFrame(new_data)
     new_data = between_scaler.transform(eval_dataset.iloc[:, 3::3].values.tolist())
     eval_dataset.iloc[:, 3::3] = pandas.DataFrame(new_data)
+
+    H = eval_dataset.iloc[:, 1::3]
+    DD = eval_dataset.iloc[:, 2::3]
+    B = eval_dataset.iloc[:, 3::3]
+
+    hold = np.concatenate(np.array(H), axis=None)
+    downdown = np.concatenate(np.array(DD), axis=None)
+    between = np.concatenate(np.array(B), axis=None)
+
+    generate_figures(hold, between, downdown, x_name="po standaryzacji", y_name="Liczba wystąpień",
+                     suffix="killourhy_standarization_evaluation")
+    get_statistics(hold, between, downdown)
 
     # SAVE THE SCALERS FOR FUTURE USE
 
@@ -216,24 +275,31 @@ def get_eval_dict(eval_dataset):
     return eval_data
 
 
-def generate_figures(hold, between, downdown, suffix=""):
+def generate_figures(hold, between, downdown, x_name="Czas [s]", y_name="Liczba wystąpień", suffix=""):
 
-    plt.figure()
-    plt.hist(hold, alpha=0.7, bins=50, color="orange")
-    plt.xlabel("Hold time")
-    plt.savefig("hold_times_" + suffix + ".png")
-    plt.show(block=False)
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 5))
+    fig.tight_layout(pad=5.0)
+    fig.suptitle('Rozkład cech w bazie danych Killourhy', fontsize=16)
 
-    plt.figure()
-    plt.hist(downdown, alpha=0.7, bins=50, color="green")
-    plt.xlabel("Down down time")
-    plt.savefig("downdown_times_" + suffix + ".png")
-    plt.show(block=False)
+    ax1.plot()
+    ax1.set(xlabel=f"H - {x_name}", ylabel=y_name, title="Rozkład czasów H")
+    ax1.hist(hold, alpha=0.7, bins=100, color="orange")
+    # fig.savefig("hold_times_" + suffix + ".png")
+    # plt.show(block=False)
 
-    plt.figure()
-    plt.hist(between, alpha=0.7, bins=50, color="blue")
-    plt.xlabel("Between time")
-    plt.savefig("between_times_" + suffix + ".png")
+    ax2.plot()
+    ax2.set(xlabel=f"DD - {x_name}", ylabel=y_name, title="Rozkład czasów DD")
+    ax2.hist(downdown, alpha=0.7, bins=100, color="green")
+    # plt.savefig("downdown_times_" + suffix + ".png")
+    # plt.show(block=False)
+
+    ax3.plot()
+    ax3.set(xlabel=f"UD - {x_name}", ylabel=y_name, title="Rozkład czasów UD")
+    ax3.hist(between, alpha=0.7, bins=100, color="blue")
+    # plt.savefig("between_times_" + suffix + ".png")
+    # plt.show(block=False)
+
+    fig.savefig(suffix + ".png")
     plt.show(block=False)
 
 
@@ -259,7 +325,6 @@ def get_statistics(hold, between, downdown):
 
 
 def save_data(users, eval_data):
-
     with open("train_user_data.pickle", "wb") as file:
         pickle.dump(users, file)
 
@@ -277,4 +342,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

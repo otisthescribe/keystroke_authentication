@@ -120,22 +120,27 @@ def create_model(X, X_train, X_valid, Y_train, Y_valid):
     # model.summary()
 
     model = Sequential()
+    forward_LSTM = LSTM(units=32, return_sequences=False)
+    backward_LSTM = LSTM(units=32, return_sequences=False, go_backwards=True)
+
     model.add(Input(shape=INPUT_SIZE))
     model.add(BatchNormalization())
-    forward_LSTM = LSTM(units=64, return_sequences=True)
-    backward_LSTM = LSTM(units=64, return_sequences=True, go_backwards=True)
     model.add(Bidirectional(forward_LSTM, backward_layer=backward_LSTM, input_shape=INPUT_SIZE))
     model.add(BatchNormalization())
     model.add(Flatten())
-    model.add(Dropout(0.3))
-    model.add(Dense(TRAINING_USERS, activation="softmax", kernel_regularizer='l2'))
+    model.add(Dropout(0.2))
+    model.add(Dense(TRAINING_USERS, activation="softmax"))
+
     select_optimizer = Adam()
     model.compile(loss='categorical_crossentropy', optimizer=select_optimizer, metrics=['accuracy'])
     model.summary()
 
     # batch size indicates the number of observations to calculate before updating the weights
-    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=256)
+    history = model.fit(X_train, Y_train, validation_data=(X_valid, Y_valid), epochs=128, batch_size=64)
     vector_probes = model.predict(X)
+
+    print(model.evaluate(X_valid, Y_valid, batch_size=50))
+
     central_vector = np.mean(vector_probes, axis=0)
 
     return model, central_vector, history
@@ -239,11 +244,11 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
     plt.figure()
     n_TP, bins_TP, patches_TP = plt.hist(confidence_TP_MLP, alpha=1, bins=100)
     n_TN, bins_TN, patches_TN = plt.hist(confidence_TN_MLP, alpha=0.5, bins=100)
-    plt.legend(["score True Positive", "score True Negative"])
+    plt.legend(["wyniki True Positive", "wyniki True Negative"])
     plt.xlim([-1, 1])
-    plt.xlabel("score")
+    plt.xlabel("wynik biometryczny")
     plt.grid()
-    plt.savefig("./plots/confidence_TP_TN.png")
+    plt.savefig("./plots/confidence_TP_TN-50users-10.png")
     plt.show(block=False)
 
     # Probability of true negatives based on the threshold
@@ -251,8 +256,8 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
     plt.plot(bins_TP[1:], np.cumsum(n_TP) / np.sum(n_TP))
     plt.plot(bins_TN[1:], 1 - (np.cumsum(n_TN) / np.sum(n_TN)))
     plt.grid()
-    plt.xlabel("threshold")
-    plt.ylabel("probability")
+    plt.xlabel("próg biometryczny")
+    plt.ylabel("prawdopodobieństwo")
     plt.savefig("./plots/threshold_probability.png")
     plt.show(block=False)
 
@@ -274,11 +279,11 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
     plt.plot(bins_TN[1:], far)
     legend_f = ['false acceptance rate', 'false rejection rate']
     plt.legend(legend_f, loc='upper center')
-    plt.xlabel('threshold')
-    plt.ylabel('probability')
+    plt.xlabel('próg biometryczny')
+    plt.ylabel('prawdopodobieństwo')
     plt.grid()
     plt.show(block=False)
-    plt.savefig("./plots/far_frr.png")
+    plt.savefig("./plots/far_frr-50users-10.png")
 
     # DET CURVE
     plt.figure(figsize=(10, 10))
@@ -308,11 +313,11 @@ def model_accuracy_figure(history):
     plt.figure()
     plt.plot(history.history["accuracy"])
     plt.plot(history.history["val_accuracy"])
-    plt.title("Model accuracy")
-    plt.ylabel("Accuracy")
-    plt.xlabel("Epoch")
-    plt.legend(["Train", "Test"], loc="upper left")
-    plt.savefig("./plots/model_accuracy.png")
+    plt.title("Dokładność modelu")
+    plt.ylabel("Dokładność")
+    plt.xlabel("Epoka")
+    plt.legend(["Trening", "Walidacja"], loc="upper left")
+    plt.savefig("./plots/model_accuracy-50users-10.png")
     plt.show(block=False)
 
     # Model loss
