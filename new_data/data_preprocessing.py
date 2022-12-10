@@ -9,13 +9,13 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from progress.bar import Bar
 
-USERS = 21
+USERS = 300
 FILES_TO_READ = 4 * USERS
-PROBE_SIZE = 10
+PROBE_SIZE = 20
 MIN_SECTIONS = 15
 
 REMOVE_OUTLIERS = True
-DATA_AUGMENTATION = True
+DATA_AUGMENTATION = False
 
 
 def divide_dataset(data):
@@ -47,6 +47,7 @@ def divide_dataset(data):
             training_original[1] = user_data[:SEP]
             testing_original[1] = user_data[SEP:]
             evaluation[1] = user_data[SEP:]
+            print("ROOT USER SAMPLES: ", len(training_original[1]))
             user_count += 1
         elif user_count < USERS // 2:
             # TRAIN i VALID
@@ -68,6 +69,8 @@ def divide_dataset(data):
     test_num = len(testing_original[1])
     SEP1 = int(train_num / len(training_temp)) + 1
     SEP2 = int(test_num / len(testing_temp)) + 1
+
+    print(SEP1, SEP2)
 
     training_original[0] = []
     testing_original[0] = []
@@ -91,6 +94,16 @@ def divide_dataset(data):
         random.shuffle(evaluation_temp[i])
         for j in range(EVAL_SEP):
             evaluation[0].append(evaluation_temp[i][j])
+
+    print("ROOT USER")
+    print(f"TRAINING: {len(training_original[1])}")
+    print(f"TESTING: {len(testing_original[1])}")
+    print(f"EVALUATION: {len(evaluation[1])}")
+
+    print("OTHER USERS")
+    print(f"TRAINING: {len(training_original[0])}")
+    print(f"TESTING: {len(testing_original[0])}")
+    print(f"EVALUATION: {len(evaluation[0])}")
 
     return training_original, testing_original, evaluation
 
@@ -136,7 +149,7 @@ def ascii_encoding(keycodes):
     # onehot[28] -> others
     onehot = [[0 for _ in range(29)] for _ in range(len(keycodes))]
     for i in range(len(keycodes)):
-        key = keycodes[i]
+        key = int(keycodes[i])
         if 65 <= key <= 90:
             onehot[i][key - 65] = 1
         elif key == 32:

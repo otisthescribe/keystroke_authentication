@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 import numpy as np
 import keras.optimizers
-from keras.layers import Dense, Input, Flatten, BatchNormalization, LSTM, Bidirectional, Dropout
+from keras.layers import Dense, Input, Flatten, BatchNormalization, LSTM, Bidirectional, Dropout, Conv1D
 from keras.models import Sequential, load_model
 from keras.utils import to_categorical
 from keras.optimizers import RMSprop, Adam
@@ -126,6 +126,21 @@ def create_model(X_train, Y_train, X_valid, Y_valid, X_eval, Y_eval):
     #
     # opt = keras.optimizers.Adam(learning_rate=0.001)
     # model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
+    # model.summary()
+
+    # DAN 1D 2 LSTM
+
+    # model = Sequential()
+    # model.add(Conv1D(32, 2, activation='relu', input_shape=INPUT_SIZE))
+    # model.add(LSTM(32, return_sequences=True))
+    # model.add(Dropout(0.3))
+    # model.add(LSTM(32, return_sequences=True))
+    # model.add(Dropout(0.3))
+    # model.add(Flatten())
+    # model.add(Dense(2, activation="softmax"))
+    #
+    # select_optimizer = Adam(learning_rate=0.0001)
+    # model.compile(loss='categorical_crossentropy', optimizer=select_optimizer, metrics=['accuracy'])
     # model.summary()
 
     model = Sequential()
