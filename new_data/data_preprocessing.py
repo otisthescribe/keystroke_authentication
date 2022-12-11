@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from progress.bar import Bar
 
-TRAINING_USERS = 300
-EVALUATION_USERS = 20
+TRAINING_USERS = 50
+EVALUATION_USERS = 10
 USERS = TRAINING_USERS + EVALUATION_USERS
 FILES_TO_READ = 4 * USERS
 PROBE_SIZE = 40
@@ -156,6 +156,7 @@ def get_user_data(data):
 
         for i in range(len(group) - PROBE_SIZE):
             chunk = transposed.iloc[:, i:i + PROBE_SIZE].to_numpy()
+            chunk = chunk.T
             user_data.append(chunk)
 
     return user_data, hold, between, downdown

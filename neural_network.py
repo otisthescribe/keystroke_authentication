@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 from new_data.data_preprocessing import TRAINING_USERS, PROBE_SIZE
 import sys
 
-INPUT_SIZE = (32, PROBE_SIZE)  # number of attributes - it will be the size of an input vector
+INPUT_SIZE = (PROBE_SIZE, 32)  # number of attributes - it will be the size of an input vector
 ENROLL_SIZE = 10
 
 np.set_printoptions(threshold=sys.maxsize)
@@ -248,18 +248,18 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
     plt.xlim([-1, 1])
     plt.xlabel("wynik biometryczny")
     plt.grid()
-    plt.savefig("./plots/confidence_TP_TN-50users-10.png")
+    plt.savefig("./plots/confidence_TP_TN.png")
     plt.show(block=False)
 
-    # Probability of true negatives based on the threshold
-    plt.figure()
-    plt.plot(bins_TP[1:], np.cumsum(n_TP) / np.sum(n_TP))
-    plt.plot(bins_TN[1:], 1 - (np.cumsum(n_TN) / np.sum(n_TN)))
-    plt.grid()
-    plt.xlabel("próg biometryczny")
-    plt.ylabel("prawdopodobieństwo")
-    plt.savefig("./plots/threshold_probability.png")
-    plt.show(block=False)
+    # # Probability of true negatives based on the threshold
+    # plt.figure()
+    # plt.plot(bins_TP[1:], np.cumsum(n_TP) / np.sum(n_TP))
+    # plt.plot(bins_TN[1:], 1 - (np.cumsum(n_TN) / np.sum(n_TN)))
+    # plt.grid()
+    # plt.xlabel("próg biometryczny")
+    # plt.ylabel("prawdopodobieństwo")
+    # plt.savefig("./plots/threshold_probability.png")
+    # plt.show(block=False)
 
     tn_sum = np.sum(n_TN)
     tp_sum = np.sum(n_TP)
@@ -283,23 +283,23 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
     plt.ylabel('prawdopodobieństwo')
     plt.grid()
     plt.show(block=False)
-    plt.savefig("./plots/far_frr-50users-10.png")
+    plt.savefig("./plots/far_frr.png")
 
-    # DET CURVE
-    plt.figure(figsize=(10, 10))
-    # fig, ax = plt.subplots(figsize=(10, 10))
-    plt.yscale('log')
-    plt.xscale('log')
-    # ticks_to_use = [8, 15, 20, 27, 30, 50, 60, 70, 75, 80, 90, 100]
-    # ax.set_xticks(ticks_to_use)
-    # ax.set_yticks(ticks_to_use)
-    plt.plot(far * 100, frr * 100)
-    plt.axis([8, 100, 8, 100])
-    plt.grid()
-    plt.xlabel('false acceptance rate (%)')
-    plt.ylabel('false rejection rate (%)')
-    plt.show(block=False)
-    plt.savefig("./plots/det_curve.png")
+    # # DET CURVE
+    # plt.figure(figsize=(10, 10))
+    # # fig, ax = plt.subplots(figsize=(10, 10))
+    # plt.yscale('log')
+    # plt.xscale('log')
+    # # ticks_to_use = [8, 15, 20, 27, 30, 50, 60, 70, 75, 80, 90, 100]
+    # # ax.set_xticks(ticks_to_use)
+    # # ax.set_yticks(ticks_to_use)
+    # plt.plot(far * 100, frr * 100)
+    # plt.axis([8, 100, 8, 100])
+    # plt.grid()
+    # plt.xlabel('false acceptance rate (%)')
+    # plt.ylabel('false rejection rate (%)')
+    # plt.show(block=False)
+    # plt.savefig("./plots/det_curve.png")
 
 
 def model_accuracy_figure(history):
@@ -317,19 +317,19 @@ def model_accuracy_figure(history):
     plt.ylabel("Dokładność")
     plt.xlabel("Epoka")
     plt.legend(["Trening", "Walidacja"], loc="upper left")
-    plt.savefig("./plots/model_accuracy-50users-10.png")
+    plt.savefig("./plots/model_accuracy.png")
     plt.show(block=False)
-
-    # Model loss
-    plt.figure()
-    plt.plot(history.history["loss"])
-    plt.plot(history.history["val_loss"])
-    plt.title("Model loss")
-    plt.ylabel("Loss")
-    plt.xlabel("Epoch")
-    plt.legend(["Train", "Test"], loc="upper left")
-    plt.savefig("./plots/model_loss.png")
-    plt.show(block=False)
+    #
+    # # Model loss
+    # plt.figure()
+    # plt.plot(history.history["loss"])
+    # plt.plot(history.history["val_loss"])
+    # plt.title("Model loss")
+    # plt.ylabel("Loss")
+    # plt.xlabel("Epoch")
+    # plt.legend(["Train", "Test"], loc="upper left")
+    # plt.savefig("./plots/model_loss.png")
+    # plt.show(block=False)
 
 
 def save_model(model, directory="model"):
