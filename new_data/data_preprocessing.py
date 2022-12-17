@@ -11,7 +11,7 @@ from progress.bar import Bar
 
 USERS = 300
 FILES_TO_READ = 4 * USERS
-PROBE_SIZE = 20
+PROBE_SIZE = 40
 MIN_SECTIONS = 15
 
 REMOVE_OUTLIERS = True
