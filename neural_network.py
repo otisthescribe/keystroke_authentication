@@ -114,34 +114,6 @@ def prepare_data(train_org, test_org, evaluation):
 
 
 def create_model(X_train, Y_train, X_valid, Y_valid, X_eval, Y_eval):
-    # flat = INPUT_SIZE[0] * INPUT_SIZE[1]
-    # model = Sequential()
-    # model.add(Input(shape=INPUT_SIZE))
-    # model.add(Flatten())
-    # model.add(Dense(units=flat, activation="relu", input_shape=INPUT_SIZE))
-    # model.add(Dense(units=flat // 2, activation="relu", input_shape=INPUT_SIZE))
-    # model.add(Dense(units=flat // 3, activation="relu", input_shape=INPUT_SIZE))
-    # model.add(Dense(units=flat // 4, activation="relu", input_shape=INPUT_SIZE))
-    # model.add(Dense(units=2, activation="softmax"))
-    #
-    # opt = keras.optimizers.Adam(learning_rate=0.001)
-    # model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
-    # model.summary()
-
-    # DAN 1D 2 LSTM
-
-    # model = Sequential()
-    # model.add(Conv1D(32, 2, activation='relu', input_shape=INPUT_SIZE))
-    # model.add(LSTM(32, return_sequences=True))
-    # model.add(Dropout(0.3))
-    # model.add(LSTM(32, return_sequences=True))
-    # model.add(Dropout(0.3))
-    # model.add(Flatten())
-    # model.add(Dense(2, activation="softmax"))
-    #
-    # select_optimizer = Adam(learning_rate=0.0001)
-    # model.compile(loss='categorical_crossentropy', optimizer=select_optimizer, metrics=['accuracy'])
-    # model.summary()
 
     model = Sequential()
     model.add(Input(shape=INPUT_SIZE))
@@ -203,11 +175,12 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
 
     # Number of true negatives vs number of true positives
     plt.figure()
-    n_TP, bins_TP, patches_TP = plt.hist(confidence_TP_MLP, alpha=1, bins=100)
-    n_TN, bins_TN, patches_TN = plt.hist(confidence_TN_MLP, alpha=0.5, bins=100)
+    n_TP, bins_TP, patches_TP = plt.hist(confidence_TP_MLP, alpha=1, bins=100, range=(-0.1, 1))
+    n_TN, bins_TN, patches_TN = plt.hist(confidence_TN_MLP, alpha=0.5, bins=100, range=(-0.1, 1))
     plt.legend(["score True Positive", "score True Negative"])
     plt.xlim([-0.1, 1.1])
-    plt.xlabel("score")
+    plt.xlabel("wynik biometryczny")
+    plt.ylabel("liczba wystąpień")
     plt.grid()
     plt.savefig("./plots/confidence_TP_TN.png")
     plt.show(block=False)
@@ -217,8 +190,8 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
     plt.plot(bins_TP[1:], np.cumsum(n_TP) / np.sum(n_TP))
     plt.plot(bins_TN[1:], 1 - (np.cumsum(n_TN) / np.sum(n_TN)))
     plt.grid()
-    plt.xlabel("threshold")
-    plt.ylabel("probability")
+    plt.xlabel("próg biometryczny")
+    plt.ylabel("prawdopodobieństwo")
     plt.savefig("./plots/threshold_probability.png")
     plt.show(block=False)
 
@@ -234,33 +207,21 @@ def confidence_figure(confidence_TP_MLP, confidence_TN_MLP):
         far[i] /= tn_sum
         far[i] = 1 - far[i]
 
-    # FAR FRR figure
-    plt.figure()
-    plt.plot(bins_TP[1:], frr)
-    plt.plot(bins_TN[1:], far)
-    legend_f = ['false acceptance rate', 'false rejection rate']
-    plt.legend(legend_f, loc='upper center')
-    plt.xlabel('threshold')
-    plt.ylabel('probability')
-    plt.grid()
-    plt.show(block=False)
-    plt.savefig("./plots/far_frr.png")
-
-    # DET CURVE
-    plt.figure(figsize=(10, 10))
-    # fig, ax = plt.subplots(figsize=(10, 10))
-    plt.yscale('log')
-    plt.xscale('log')
-    # ticks_to_use = [8, 15, 20, 27, 30, 50, 60, 70, 75, 80, 90, 100]
-    # ax.set_xticks(ticks_to_use)
-    # ax.set_yticks(ticks_to_use)
-    plt.plot(far * 100, frr * 100)
-    plt.axis([8, 100, 8, 100])
-    plt.grid()
-    plt.xlabel('false acceptance rate (%)')
-    plt.ylabel('false rejection rate (%)')
-    plt.show(block=False)
-    plt.savefig("./plots/det_curve.png")
+    # # DET CURVE
+    # plt.figure(figsize=(10, 10))
+    # # fig, ax = plt.subplots(figsize=(10, 10))
+    # plt.yscale('log')
+    # plt.xscale('log')
+    # # ticks_to_use = [8, 15, 20, 27, 30, 50, 60, 70, 75, 80, 90, 100]
+    # # ax.set_xticks(ticks_to_use)
+    # # ax.set_yticks(ticks_to_use)
+    # plt.plot(far * 100, frr * 100)
+    # plt.axis([8, 100, 8, 100])
+    # plt.grid()
+    # plt.xlabel('false acceptance rate (%)')
+    # plt.ylabel('false rejection rate (%)')
+    # plt.show(block=False)
+    # plt.savefig("./plots/det_curve.png")
 
 
 def model_accuracy_figure(history):
@@ -274,23 +235,22 @@ def model_accuracy_figure(history):
     plt.figure()
     plt.plot(history.history["accuracy"])
     plt.plot(history.history["val_accuracy"])
-    plt.title("Model accuracy")
-    plt.ylabel("Accuracy")
-    plt.xlabel("Epoch")
-    plt.legend(["Train", "Test"], loc="upper left")
+    plt.ylabel("dokładność modelu")
+    plt.xlabel("epoka")
+    plt.legend(["trening", "walidacja"], loc="upper left")
     plt.savefig("./plots/model_accuracy.png")
     plt.show(block=False)
 
-    # Model loss
-    plt.figure()
-    plt.plot(history.history["loss"])
-    plt.plot(history.history["val_loss"])
-    plt.title("Model loss")
-    plt.ylabel("Loss")
-    plt.xlabel("Epoch")
-    plt.legend(["Train", "Test"], loc="upper left")
-    plt.savefig("./plots/model_loss.png")
-    plt.show(block=False)
+    # # Model loss
+    # plt.figure()
+    # plt.plot(history.history["loss"])
+    # plt.plot(history.history["val_loss"])
+    # plt.title("Model loss")
+    # plt.ylabel("Loss")
+    # plt.xlabel("Epoch")
+    # plt.legend(["Train", "Test"], loc="upper left")
+    # plt.savefig("./plots/model_loss.png")
+    # plt.show(block=False)
 
 
 def save_model(model, directory="model"):
